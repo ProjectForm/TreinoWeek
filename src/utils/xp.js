@@ -316,3 +316,17 @@ export function computePlayerStateEngine(logs, weeks) {
 
   return { ...baseResult, bonusEquilibrioAtivo, conquistasDesbloqueadas, titulosDesbloqueados };
 }
+
+// Compara dois resultados do engine (antes/depois de salvar um treino) para
+// decidir se o popup de level up deve aparecer. Ascensões têm sua própria
+// tela (o nível geral volta a 0 nesse caso, o que não é um "level up").
+export function detectLevelUps(prevEngine, newEngine) {
+  if (!prevEngine || !newEngine) return null;
+  if (newEngine.ascensaoCount > prevEngine.ascensaoCount) return null;
+  if (newEngine.nivel <= prevEngine.nivel) return null;
+  const atributos = Object.keys(newEngine.atributos || {}).filter((k) => {
+    const antes = prevEngine.atributos && prevEngine.atributos[k] ? prevEngine.atributos[k].nivel : 0;
+    return newEngine.atributos[k].nivel > antes;
+  });
+  return { de: prevEngine.nivel, para: newEngine.nivel, atributos };
+}

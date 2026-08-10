@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { sGet, sSet } from "./useStorage.js";
-import { computePlayerStateEngine, multiplicadorStreak } from "../utils/xp.js";
+import { computePlayerStateEngine, multiplicadorStreak, detectLevelUps } from "../utils/xp.js";
 
 // Todo o estado do personagem é derivado dos treinos (logs/weeks) — nunca lido
 // de storage. Só o título escolhido e o "último nível de ascensão visto" (pra
@@ -10,6 +10,9 @@ export function useGamification(logs, weeks, ready) {
   const [lastSeenAscensao, setLastSeenAscensao] = useState(0);
   const [showAscensao, setShowAscensao] = useState(false);
   const [gamificationReady, setGamificationReady] = useState(false);
+  const [levelUpEvent, setLevelUpEvent] = useState(null);
+  const prevEngineRef = useRef(null);
+  const initializedRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -32,6 +35,24 @@ export function useGamification(logs, weeks, ready) {
     if (engineResult.ascensaoCount > lastSeenAscensao) setShowAscensao(true);
   }, [ready, engineResult.ascensaoCount, lastSeenAscensao]);
 
+  // Compara com o resultado anterior do engine pra detectar level up (não
+  // dispara na primeira carga — só quando um novo treino muda o resultado).
+  useEffect(() => {
+    if (!ready) return;
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      prevEngineRef.current = engineResult;
+      return;
+    }
+    const event = detectLevelUps(prevEngineRef.current, engineResult);
+    if (event) setLevelUpEvent(event);
+    prevEngineRef.current = engineResult;
+  }, [ready, engineResult]);
+
+  function clearLevelUpEvent() {
+    setLevelUpEvent(null);
+  }
+
   async function acknowledgeAscensao() {
     setShowAscensao(false);
     setLastSeenAscensao(engineResult.ascensaoCount);
@@ -47,5 +68,6 @@ export function useGamification(logs, weeks, ready) {
     engineResult, tituloAtivo, pickTitulo,
     showAscensao, setShowAscensao, acknowledgeAscensao,
     gamificationReady, multiplicadorStreak,
+    levelUpEvent, clearLevelUpEvent,
   };
 }

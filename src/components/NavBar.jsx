@@ -3,22 +3,20 @@ import { NAV } from "../constants/plan.js";
 
 export function NavBar({ view, setView }) {
   return (
-    <header className="border-b border-zinc-800 px-4 pt-5 pb-3">
-      <h1 className="text-xl font-bold tracking-wide text-rose-400">TREINO DA SEMANA</h1>
-      <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
-        {NAV.map((v) => (
-          <button
-            key={v[0]}
-            onClick={() => setView(v[0])}
-            className={
-              "px-3 py-2 rounded-lg text-sm font-semibold whitespace-nowrap " +
-              (view === v[0] ? "bg-rose-500 text-white" : "bg-zinc-900 text-zinc-400")
-            }
-          >
-            {v[1]}
-          </button>
-        ))}
-      </div>
-    </header>
+    <nav className="fixed bottom-0 left-0 right-0 z-30 bg-zinc-900 border-t border-zinc-800 flex">
+      {NAV.map(([key, icon, label]) => (
+        <button
+          key={key}
+          onClick={() => setView(key)}
+          className={
+            "flex-1 flex flex-col items-center justify-center gap-0.5 py-2 active:scale-95 transition-transform " +
+            (view === key ? "text-rose-400" : "text-zinc-500")
+          }
+        >
+          <span className="text-lg leading-none">{icon}</span>
+          <span className="text-[10px] font-semibold">{label}</span>
+        </button>
+      ))}
+    </nav>
   );
 }

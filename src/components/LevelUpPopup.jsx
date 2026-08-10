@@ -1,26 +1,28 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 
-// Toast simples que aparece por alguns segundos quando o nível geral sobe
-// dentro da mesma fase (sem trocar de patente — isso é a AscensaoModal).
-export function LevelUpPopup({ nivel }) {
-  const [prevNivel, setPrevNivel] = useState(nivel);
-  const [visible, setVisible] = useState(false);
-
+// Popup não-bloqueante de level up. Recebe o evento já calculado por
+// detectLevelUps (utils/xp.js) — não decide sozinho quando disparar.
+export function LevelUpPopup({ event, onClose }) {
   useEffect(() => {
-    if (nivel > prevNivel) {
-      setVisible(true);
-      const t = setTimeout(() => setVisible(false), 3500);
-      setPrevNivel(nivel);
-      return () => clearTimeout(t);
-    }
-    setPrevNivel(nivel);
-  }, [nivel]);
+    if (!event) return;
+    const t = setTimeout(onClose, 3500);
+    return () => clearTimeout(t);
+  }, [event, onClose]);
 
-  if (!visible) return null;
+  if (!event) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-sm font-semibold px-4 py-2 rounded-full shadow-lg z-50">
-      Subiu para o nível {nivel}!
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-6 pointer-events-none">
+      <div
+        onClick={onClose}
+        className="pointer-events-auto bg-zinc-900 border border-rose-500/50 rounded-2xl px-6 py-5 shadow-2xl text-center animate-scaleIn max-w-xs w-full"
+      >
+        <p className="text-xs text-rose-400 uppercase tracking-widest font-semibold">Level Up</p>
+        <p className="text-4xl font-bold text-zinc-100 mt-1">Nv. {event.para}</p>
+        {event.atributos.length > 0 && (
+          <p className="text-xs text-teal-400 mt-2 capitalize">{event.atributos.join(", ")} subiu de nível</p>
+        )}
+      </div>
     </div>
   );
 }

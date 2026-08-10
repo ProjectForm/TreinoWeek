@@ -5,6 +5,8 @@ import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
 import { formatBR, formatWeight, agoLabel } from "../utils/formatters.js";
 import { weekdayFromISO } from "../utils/dates.js";
 import { tonnageOf, sanitizeMinutes } from "../utils/stats.js";
+import { WeightInput } from "./WeightInput.jsx";
+import { RepsInput } from "./RepsInput.jsx";
 
 export function WorkoutForm({ plan, workout }) {
   const {
@@ -196,24 +198,9 @@ export function WorkoutForm({ plan, workout }) {
                   {sets.map((s, i) => (
                     <div key={i} className="flex items-center gap-2 mb-2">
                       <span className="text-xs text-zinc-500 w-4">{i + 1}</span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        step="0.5"
-                        placeholder="kg"
-                        value={s.weight}
-                        onChange={(e) => updateSet(item.id, i, "weight", e.target.value)}
-                        className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 outline-none"
-                      />
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        placeholder="reps"
-                        value={s.reps}
-                        onChange={(e) => updateSet(item.id, i, "reps", e.target.value)}
-                        className="w-20 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 outline-none"
-                      />
-                      <button onClick={() => removeSet(item.id, i)} className="px-2 py-1 text-zinc-600 text-lg">&minus;</button>
+                      <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
+                      <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
+                      <button onClick={() => removeSet(item.id, i)} className="px-2 py-1 text-zinc-600 text-lg shrink-0">&minus;</button>
                     </div>
                   ))}
                   <button onClick={() => addSet(item.id)} className="text-xs text-zinc-400 mt-1">+ adicionar série</button>
