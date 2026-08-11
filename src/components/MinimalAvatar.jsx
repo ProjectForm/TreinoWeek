@@ -47,7 +47,7 @@ export function MinimalAvatar({ nivel, atributos }) {
   const hipY = 92;
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 flex flex-col items-center">
+    <div className="flex flex-col items-center">
       <svg viewBox="0 0 120 172" className="w-28 h-40">
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -167,7 +167,7 @@ export function MinimalAvatar({ nivel, atributos }) {
         <circle cx={cx + 4.5} cy="21" r="1.3" fill="#18181b" />
       </svg>
       <p className="text-xs text-zinc-500 mt-1">Estágio {estagio}/5</p>
-      <p className="text-xs text-zinc-600 capitalize">Foco: {atributoDominante}</p>
+      <p className="text-xs text-zinc-500 capitalize">Foco: {atributoDominante}</p>
     </div>
   );
 }

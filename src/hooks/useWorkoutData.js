@@ -3,7 +3,6 @@ import { sList, sGet, sSet } from "./useStorage.js";
 import { DEFAULT_BODY } from "../constants/config.js";
 import { DEFAULT_MUSCLE_BREAKDOWN, MUSCLE_TO_GROUP } from "../constants/muscleBreakdown.js";
 import { toISO, todayISO, weekdayFromISO, getWeekKey } from "../utils/dates.js";
-import { DAYS } from "../constants/plan.js";
 import {
   tonnageOf, statsOf, getBaseline, computeStatus, computeMeta,
   fallbackStatusAndMeta, sanitizeWeight, sanitizeReps,
@@ -18,10 +17,9 @@ import { computePlayerStateEngine, multiplicadorStreak } from "../utils/xp.js";
 // vivia dentro do componente App() de forma monolítica agora mora aqui.
 export function useWorkoutData(plan, planReady) {
   const [date, setDate] = useState(todayISO());
-  const [day, setDay] = useState(() => {
-    const w = weekdayFromISO(todayISO());
-    return DAYS.indexOf(w) >= 0 ? w : "seg";
-  });
+  // Dia da semana é sempre derivado da data — nunca um estado separado que
+  // possa dessincronizar (essa era a causa da inconsistência data/dia).
+  const day = weekdayFromISO(date);
 
   const [logs, setLogs] = useState({});
   const [weeks, setWeeks] = useState({});
@@ -214,7 +212,7 @@ export function useWorkoutData(plan, planReady) {
     setEntries(next);
     setCaffeine(saved && typeof saved.caffeine === "boolean" ? saved.caffeine : null);
     setCardio(saved && saved.cardio ? saved.cardio : { did: null, type: "caminhada", minutes: "", intensity: "moderada" });
-  }, [day, date, ready, logs, plan]);
+  }, [date, ready, logs, plan]);
 
   function updateSet(exId, idx, field, value) {
     const clean = field === "reps" ? sanitizeReps(value) : sanitizeWeight(value);
@@ -434,7 +432,7 @@ export function useWorkoutData(plan, planReady) {
   }
 
   return {
-    date, setDate, day, setDay, shiftDate,
+    date, setDate, day, shiftDate,
     logs, weeks, exerciseHistory, lastWorkoutByExercise, userCreatedAt,
     bodyStats, setBodyStats, saveProfile, profileMsg,
     entries, caffeine, setCaffeine, cardio, setCardio,

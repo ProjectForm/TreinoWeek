@@ -36,3 +36,8 @@ export const CARDIO_MET = {
 export const MET_MUSCULACAO = 5.0;
 
 export const DEFAULT_BODY = { weight: 82, height: 178, age: 24, secPerSet: 150 };
+
+// Descanso padrão sugerido entre séries (segundos). Ajustável na hora pelo
+// timer (±15s); descanso configurável por exercício fica para uma próxima
+// atualização (ver relatório).
+export const DEFAULT_REST_SECONDS = 90;

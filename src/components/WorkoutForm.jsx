@@ -1,16 +1,41 @@
-import React from "react";
-import { DAYS } from "../constants/plan.js";
+import React, { useState, useEffect } from "react";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
+import { DEFAULT_REST_SECONDS } from "../constants/config.js";
 import { formatBR, formatWeight, agoLabel, formatSet } from "../utils/formatters.js";
-import { weekdayFromISO } from "../utils/dates.js";
 import { tonnageOf, sanitizeMinutes } from "../utils/stats.js";
 import { WeightInput } from "./WeightInput.jsx";
 import { RepsInput } from "./RepsInput.jsx";
+import { WeekStrip } from "./WeekStrip.jsx";
+import { RestTimer } from "./RestTimer.jsx";
+import { Icon } from "./Icon.jsx";
+
+function isSetComplete(item, s) {
+  if (!s) return false;
+  const w = parseFloat(s.weight) > 0;
+  const r = parseFloat(s.reps) > 0;
+  if (!item.unilateral) return w && r;
+  return w && parseFloat(s.weightD) > 0 && r;
+}
+
+function ToggleBtn({ active, onClick, children, className = "" }) {
+  return (
+    <button
+      onClick={onClick}
+      className={
+        "flex-1 py-2.5 rounded-xl text-sm font-semibold press " +
+        className + " " +
+        (active ? "bg-rose-500 text-white" : "surface-2 text-zinc-400")
+      }
+    >
+      {children}
+    </button>
+  );
+}
 
 export function WorkoutForm({ plan, workout }) {
   const {
-    date, day, setDay, shiftDate,
+    date, setDate, day, logs,
     entries, caffeine, setCaffeine, cardio, setCardio,
     updateSet, addSet, removeSet, repeatPrevious, previousSameDay, lastByExercise,
     groupVolumesLive, totalTonnage, musculKcalInfo, cardioKcal, totalKcal,
@@ -18,144 +43,122 @@ export function WorkoutForm({ plan, workout }) {
   } = workout;
 
   const info = plan[day] || { items: [], muscle: "", full: "" };
-  const mismatch = weekdayFromISO(date) !== day;
+
+  const [expandedOverrides, setExpandedOverrides] = useState({});
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [rest, setRest] = useState(null); // { total, secondsLeft }
+
+  useEffect(() => {
+    setExpandedOverrides({});
+  }, [date]);
+
+  useEffect(() => {
+    if (!rest) return;
+    if (rest.secondsLeft <= 0) {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try { navigator.vibrate(200); } catch (e) {}
+      }
+      setRest(null);
+      return;
+    }
+    const t = setTimeout(() => setRest((r) => r && { ...r, secondsLeft: r.secondsLeft - 1 }), 1000);
+    return () => clearTimeout(t);
+  }, [rest]);
+
+  function handleSetChange(item, idx, field, value) {
+    const before = (entries[item.id] || [])[idx] || {};
+    const after = { ...before, [field]: value };
+    const wasComplete = isSetComplete(item, before);
+    const nowComplete = isSetComplete(item, after);
+    updateSet(item.id, idx, field, value);
+    if (!wasComplete && nowComplete) {
+      setRest({ total: DEFAULT_REST_SECONDS, secondsLeft: DEFAULT_REST_SECONDS });
+    }
+  }
+
+  function toggleExpanded(id, defaultVal) {
+    setExpandedOverrides((prev) => ({ ...prev, [id]: prev[id] === undefined ? !defaultVal : !prev[id] }));
+  }
+
+  const focusItem = info.items.find((item) => {
+    const sets = entries[item.id] || [];
+    return !(sets.length > 0 && sets.every((s) => isSetComplete(item, s)));
+  });
+  const focusId = focusItem ? focusItem.id : null;
+
+  const cardioSummary = cardio.did === true ? `Cardio ${cardio.type}` : cardio.did === false ? "Sem cardio" : "Cardio";
+  const caffeineSummary = caffeine === null ? "Cafeína" : caffeine ? "Com cafeína" : "Sem cafeína";
 
   return (
-    <div className="px-4 pt-4">
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {DAYS.map((k) => (
-          <button
-            key={k}
-            onClick={() => setDay(k)}
-            className={
-              "px-3 py-2 rounded-lg text-sm font-semibold border " +
-              (day === k ? "bg-zinc-100 text-zinc-900 border-zinc-100" : "bg-zinc-900 text-zinc-400 border-zinc-800")
-            }
-          >
-            {(plan[k] && plan[k].label) || k}
-          </button>
-        ))}
-      </div>
-      <p className="text-sm text-zinc-500 mt-2">{info.muscle}</p>
-
-      <div className="flex items-center gap-2 mt-3 bg-zinc-900 border border-zinc-800 rounded-lg p-2">
-        <button onClick={() => shiftDate(-1)} className="px-3 py-1 text-zinc-400 text-lg">&#8249;</button>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => e.target.value && workout.setDate(e.target.value)}
-          className="flex-1 bg-zinc-900 text-zinc-100 text-sm text-center outline-none"
-        />
-        <button onClick={() => shiftDate(1)} className="px-3 py-1 text-zinc-400 text-lg">&#8250;</button>
-      </div>
-      {mismatch && (
-        <p className="text-xs text-amber-400 mt-2">Atenção: {formatBR(date)} não cai em {info.full.toLowerCase()}.</p>
-      )}
+    <div className="px-4 pt-4 pb-6">
+      <WeekStrip date={date} plan={plan} logs={logs} onSelectDate={setDate} />
+      <p className="text-sm text-zinc-400 mt-3">{info.muscle || "Dia de descanso"}</p>
 
       {info.items.length === 0 ? (
-        <div className="mt-12 text-center">
+        <div className="mt-16 text-center">
           <p className="text-lg font-semibold text-zinc-300">Dia de descanso</p>
-          <p className="text-sm text-zinc-500 mt-1">Nada programado para quinta.</p>
+          <p className="text-sm text-zinc-500 mt-1">Sem treino planejado para hoje. Aproveite para recuperar.</p>
         </div>
       ) : (
         <div className="mt-4">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 mb-3">
-            <p className="text-sm text-zinc-300 font-semibold">Tomou cafeína antes do treino?</p>
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => setCaffeine(true)}
-                className={
-                  "flex-1 py-2 rounded-lg text-sm font-semibold border " +
-                  (caffeine === true ? "bg-amber-500 text-zinc-900 border-amber-500" : "bg-zinc-950 text-zinc-400 border-zinc-800")
-                }
-              >
-                Sim
-              </button>
-              <button
-                onClick={() => setCaffeine(false)}
-                className={
-                  "flex-1 py-2 rounded-lg text-sm font-semibold border " +
-                  (caffeine === false ? "bg-zinc-100 text-zinc-900 border-zinc-100" : "bg-zinc-950 text-zinc-400 border-zinc-800")
-                }
-              >
-                Não
-              </button>
+          <button
+            onClick={() => setSetupOpen((v) => !v)}
+            className="w-full flex items-center justify-between surface-1 rounded-2xl px-4 py-3 mb-3 press"
+          >
+            <div className="text-left">
+              <p className="text-sm font-semibold text-zinc-200">Antes de começar</p>
+              <p className="text-xs text-zinc-500 mt-0.5">{caffeineSummary} · {cardioSummary}</p>
             </div>
-          </div>
+            <Icon name="chevronRight" size={18} className={"text-zinc-500 transition-transform " + (setupOpen ? "rotate-90" : "")} />
+          </button>
 
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 mb-3">
-            <p className="text-sm text-zinc-300 font-semibold">Fez cardio hoje?</p>
-            <div className="flex gap-2 mt-2">
-              <button
-                onClick={() => setCardio((prev) => ({ ...prev, did: true }))}
-                className={
-                  "flex-1 py-2 rounded-lg text-sm font-semibold border " +
-                  (cardio.did === true ? "bg-teal-500 text-zinc-900 border-teal-500" : "bg-zinc-950 text-zinc-400 border-zinc-800")
-                }
-              >
-                Sim
-              </button>
-              <button
-                onClick={() => setCardio((prev) => ({ ...prev, did: false }))}
-                className={
-                  "flex-1 py-2 rounded-lg text-sm font-semibold border " +
-                  (cardio.did === false ? "bg-zinc-100 text-zinc-900 border-zinc-100" : "bg-zinc-950 text-zinc-400 border-zinc-800")
-                }
-              >
-                Não
-              </button>
-            </div>
-            {cardio.did === true && (
-              <div className="mt-3 space-y-2">
+          {setupOpen && (
+            <div className="surface-1 rounded-2xl p-4 mb-3 space-y-4 animate-fadeIn">
+              <div>
+                <p className="text-sm text-zinc-300 font-medium mb-2">Tomou cafeína antes do treino?</p>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => setCardio((prev) => ({ ...prev, type: "caminhada" }))}
-                    className={
-                      "flex-1 py-2 rounded-lg text-xs font-semibold border " +
-                      (cardio.type === "caminhada" ? "bg-zinc-100 text-zinc-900 border-zinc-100" : "bg-zinc-950 text-zinc-400 border-zinc-800")
-                    }
-                  >
-                    Caminhada
-                  </button>
-                  <button
-                    onClick={() => setCardio((prev) => ({ ...prev, type: "bicicleta" }))}
-                    className={
-                      "flex-1 py-2 rounded-lg text-xs font-semibold border " +
-                      (cardio.type === "bicicleta" ? "bg-zinc-100 text-zinc-900 border-zinc-100" : "bg-zinc-950 text-zinc-400 border-zinc-800")
-                    }
-                  >
-                    Bicicleta
-                  </button>
-                </div>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  placeholder="minutos"
-                  value={cardio.minutes}
-                  onChange={(e) => setCardio((prev) => ({ ...prev, minutes: sanitizeMinutes(e.target.value) }))}
-                  className="w-full bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2 text-sm text-zinc-100 outline-none"
-                />
-                <div className="flex gap-2">
-                  {["leve", "moderada", "forte"].map((lvl) => (
-                    <button
-                      key={lvl}
-                      onClick={() => setCardio((prev) => ({ ...prev, intensity: lvl }))}
-                      className={
-                        "flex-1 py-2 rounded-lg text-xs font-semibold capitalize border " +
-                        (cardio.intensity === lvl ? "bg-teal-500 text-zinc-900 border-teal-500" : "bg-zinc-950 text-zinc-400 border-zinc-800")
-                      }
-                    >
-                      {lvl}
-                    </button>
-                  ))}
+                  <ToggleBtn active={caffeine === true} onClick={() => setCaffeine(true)}>Sim</ToggleBtn>
+                  <ToggleBtn active={caffeine === false} onClick={() => setCaffeine(false)}>Não</ToggleBtn>
                 </div>
               </div>
-            )}
-          </div>
+              <div>
+                <p className="text-sm text-zinc-300 font-medium mb-2">Fez cardio hoje?</p>
+                <div className="flex gap-2">
+                  <ToggleBtn active={cardio.did === true} onClick={() => setCardio((prev) => ({ ...prev, did: true }))}>Sim</ToggleBtn>
+                  <ToggleBtn active={cardio.did === false} onClick={() => setCardio((prev) => ({ ...prev, did: false }))}>Não</ToggleBtn>
+                </div>
+                {cardio.did === true && (
+                  <div className="mt-3 space-y-2">
+                    <div className="flex gap-2">
+                      <ToggleBtn active={cardio.type === "caminhada"} onClick={() => setCardio((prev) => ({ ...prev, type: "caminhada" }))}>Caminhada</ToggleBtn>
+                      <ToggleBtn active={cardio.type === "bicicleta"} onClick={() => setCardio((prev) => ({ ...prev, type: "bicicleta" }))}>Bicicleta</ToggleBtn>
+                    </div>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="minutos"
+                      value={cardio.minutes}
+                      onChange={(e) => setCardio((prev) => ({ ...prev, minutes: sanitizeMinutes(e.target.value) }))}
+                      className="w-full surface-2 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none"
+                    />
+                    <div className="flex gap-2">
+                      {["leve", "moderada", "forte"].map((lvl) => (
+                        <ToggleBtn key={lvl} active={cardio.intensity === lvl} onClick={() => setCardio((prev) => ({ ...prev, intensity: lvl }))} className="capitalize">
+                          {lvl}
+                        </ToggleBtn>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {previousSameDay && (
-            <button onClick={repeatPrevious} className="w-full mb-3 bg-zinc-800 border border-zinc-700 text-zinc-100 text-sm font-semibold py-3 rounded-xl">
-              Repetir treino de {formatBR(previousSameDay)} ({agoLabel(previousSameDay, date)})
+            <button onClick={repeatPrevious} className="press w-full mb-3 surface-2 text-zinc-100 text-sm font-semibold py-3 rounded-2xl flex items-center justify-center gap-2">
+              <Icon name="clock" size={15} className="text-zinc-500" />
+              Repetir último treino
+              <span className="text-zinc-500 font-normal">· {formatBR(previousSameDay)}</span>
             </button>
           )}
 
@@ -164,114 +167,149 @@ export function WorkoutForm({ plan, workout }) {
             const sets = entries[item.id] || [];
             const last = lastByExercise[item.id];
             const exTonnage = tonnageOf(sets);
-            return (
-              <div key={item.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 mb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="font-semibold text-zinc-100">{ex.name}</p>
-                    <p className="text-xs text-zinc-500 mt-1">{ex.muscle} &middot; meta {item.sets}x{item.reps}</p>
+            const doneCount = sets.filter((s) => isSetComplete(item, s)).length;
+            const complete = sets.length > 0 && doneCount === sets.length;
+            const isFocus = item.id === focusId;
+            const expanded = expandedOverrides[item.id] !== undefined ? expandedOverrides[item.id] : isFocus;
+
+            if (!expanded) {
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => toggleExpanded(item.id, isFocus)}
+                  className="w-full flex items-center justify-between surface-1 rounded-2xl px-4 py-3 mb-2 press text-left"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {complete ? (
+                      <Icon name="checkCircle" size={19} className="text-teal-400 shrink-0" />
+                    ) : (
+                      <span className="w-[18px] h-[18px] rounded-full border-2 border-zinc-700 shrink-0" aria-hidden="true" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-zinc-200 truncate">{ex.name}</p>
+                      <p className="text-xs text-zinc-500">
+                        {doneCount}/{sets.length} séries{exTonnage > 0 ? " · " + formatWeight(exTonnage) : ""}
+                      </p>
+                    </div>
                   </div>
+                  <Icon name="chevronRight" size={16} className="text-zinc-500 shrink-0" />
+                </button>
+              );
+            }
+
+            return (
+              <div key={item.id} className="surface-1 rounded-2xl p-4 mb-2">
+                <div className="flex items-start justify-between gap-2">
+                  <button onClick={() => toggleExpanded(item.id, isFocus)} className="text-left flex-1 min-w-0">
+                    <p className="font-semibold text-zinc-100">{ex.name}</p>
+                    <p className="text-xs text-zinc-500 mt-0.5">{ex.muscle} · meta {item.sets}×{item.reps}</p>
+                  </button>
                   {exTonnage > 0 && <p className="text-xs text-teal-400 font-medium shrink-0">{formatWeight(exTonnage)}</p>}
                 </div>
 
                 {last && (
-                  <div className="mt-2 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2">
-                    <p className="text-xs text-teal-400">
-                      Último treino ({agoLabel(last.date, date)}): máx {last.max} kg
+                  <div className="mt-3 surface-2 rounded-xl px-3 py-2.5">
+                    <p className="text-xs text-zinc-400">
+                      Último treino ({agoLabel(last.date, date)}) · máx {last.max} kg
                       {last.caffeine === true ? " · com cafeína" : ""}
                       {last.caffeine === false ? " · sem cafeína" : ""}
                     </p>
                     {last.sets && last.sets.length > 0 && (
-                      <p className="text-xs text-zinc-500 mt-1">
-                        {last.sets.map((s) => formatSet(s)).join("   ")}
-                      </p>
+                      <p className="text-xs text-zinc-500 mt-1">{last.sets.map((s) => formatSet(s)).join("   ")}</p>
                     )}
                     {last.baseline && (
-                      <p className="text-xs text-zinc-600 mt-1">
-                        Média (últimas {last.baseline.count} sessões): {last.baseline.avgMax.toFixed(1)} kg
-                      </p>
+                      <p className="text-xs text-zinc-500 mt-1">Média (últimas {last.baseline.count}): {last.baseline.avgMax.toFixed(1)} kg</p>
                     )}
                   </div>
                 )}
 
-                <div className="mt-3">
-                  {sets.map((s, i) =>
-                    item.unilateral ? (
-                      <div key={i} className="mb-2">
-                        <div className="flex items-center gap-1 w-full">
-                          <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
-                          <span className="text-[10px] text-zinc-600 shrink-0">E</span>
-                          <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
-                          <span className="text-[10px] text-zinc-600 shrink-0">D</span>
-                          <WeightInput value={s.weightD} onChange={(v) => updateSet(item.id, i, "weightD", v)} />
-                        </div>
+                <div className="mt-3 space-y-1">
+                  {sets.map((s, i) => {
+                    const done = isSetComplete(item, s);
+                    return (
+                      <div key={i} className={"rounded-xl px-1.5 py-1.5 " + (done ? "bg-teal-400/[0.06]" : "")}>
+                        {item.unilateral ? (
+                          <div className="flex items-center gap-1 w-full">
+                            <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
+                            <span className="text-[10px] text-zinc-500 shrink-0">E</span>
+                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, i, "weight", v)} />
+                            <span className="text-[10px] text-zinc-500 shrink-0">D</span>
+                            <WeightInput value={s.weightD} onChange={(v) => handleSetChange(item, i, "weightD", v)} />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1 w-full">
+                            <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
+                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, i, "weight", v)} />
+                          </div>
+                        )}
                         <div className="flex items-center gap-1 w-full mt-1 pl-5">
-                          <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
-                          <button onClick={() => removeSet(item.id, i)} className="px-2 text-zinc-600 text-xs shrink-0">remover série</button>
+                          <RepsInput value={s.reps} onChange={(v) => handleSetChange(item, i, "reps", v)} />
+                          {done ? (
+                            <Icon name="checkCircle" size={16} className="text-teal-400 shrink-0" />
+                          ) : (
+                            <span className="w-4 shrink-0" aria-hidden="true" />
+                          )}
+                          <button onClick={() => removeSet(item.id, i)} aria-label={`Remover série ${i + 1}`} className="ml-auto px-2 text-zinc-500 text-xs shrink-0">
+                            remover
+                          </button>
                         </div>
                       </div>
-                    ) : (
-                      <div key={i} className="mb-2">
-                        <div className="flex items-center gap-1 w-full">
-                          <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
-                          <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
-                        </div>
-                        <div className="flex items-center gap-1 w-full mt-1 pl-5">
-                          <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
-                          <button onClick={() => removeSet(item.id, i)} className="px-2 text-zinc-600 text-xs shrink-0">remover série</button>
-                        </div>
-                      </div>
-                    )
-                  )}
-                  <button onClick={() => addSet(item.id)} className="text-xs text-zinc-400 mt-1">+ adicionar série</button>
+                    );
+                  })}
+                  <button onClick={() => addSet(item.id)} className="text-xs text-zinc-400 press pl-1.5">+ adicionar série</button>
                 </div>
               </div>
             );
           })}
 
           {totalTonnage > 0 && (
-            <div className="bg-zinc-900 border border-rose-900 rounded-xl p-3 mb-3">
-              <p className="text-sm font-semibold text-zinc-100">Resumo do esforço de hoje</p>
-              <p className="text-xs text-zinc-500 mt-1">Volume total levantado: {formatWeight(totalTonnage)}</p>
+            <div className="surface-1 rounded-2xl p-4 mt-2 mb-3">
+              <p className="text-sm font-semibold text-zinc-100">Resumo do esforço</p>
+              <p className="text-xs text-zinc-500 mt-1">Volume total: {formatWeight(totalTonnage)}</p>
               <div className="mt-2 space-y-1">
                 {GROUP_ORDER.filter((g) => groupVolumesLive[g] > 0)
                   .sort((a, b) => groupVolumesLive[b] - groupVolumesLive[a])
                   .map((g) => (
                     <div key={g} className="flex justify-between text-xs">
                       <span className="text-zinc-400">{g}</span>
-                      <span className="text-zinc-200 font-medium">{formatWeight(groupVolumesLive[g])}</span>
+                      <span className="text-zinc-300 font-medium">{formatWeight(groupVolumesLive[g])}</span>
                     </div>
                   ))}
               </div>
-              <div className="mt-3 pt-3 border-t border-zinc-800 space-y-1">
-                <div className="flex justify-between text-xs text-zinc-400">
+              <div className="mt-3 pt-3 border-t divider space-y-1">
+                <div className="flex justify-between text-xs text-zinc-500">
                   <span>Musculação (~{Math.round(musculKcalInfo.durationMin)} min)</span>
-                  <span>{Math.round(musculKcalInfo.kcal)} kcal</span>
+                  <span>~{Math.round(musculKcalInfo.kcal)} kcal</span>
                 </div>
                 {cardio.did === true && (
-                  <div className="flex justify-between text-xs text-zinc-400">
-                    <span>Cardio ({cardio.type}, {cardio.minutes || 0} min, {cardio.intensity})</span>
-                    <span>{Math.round(cardioKcal)} kcal</span>
+                  <div className="flex justify-between text-xs text-zinc-500">
+                    <span>Cardio ({cardio.type}, {cardio.minutes || 0} min)</span>
+                    <span>~{Math.round(cardioKcal)} kcal</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm text-rose-400 font-semibold pt-1">
                   <span>Total estimado</span>
-                  <span>{Math.round(totalKcal)} kcal</span>
+                  <span>~{Math.round(totalKcal)} kcal</span>
                 </div>
               </div>
-              <p className="text-xs text-zinc-600 mt-2">
-                Estimativa aproximada baseada no seu perfil (aba Perfil) e em valores médios de MET. Consumo real varia.
-              </p>
+              <p className="text-[11px] text-zinc-500 mt-2">Estimativa baseada no seu perfil e em valores médios de MET — o consumo real varia.</p>
             </div>
           )}
 
-          <button onClick={save} disabled={saving} className="w-full bg-rose-500 text-white font-semibold py-3 rounded-xl mt-2">
-            {saving ? "Salvando..." : "Salvar treino do dia"}
+          <button onClick={save} disabled={saving} className="press w-full bg-rose-500 text-white font-semibold py-3.5 rounded-2xl mt-2">
+            {saving ? "Salvando…" : "Salvar treino do dia"}
           </button>
-          {msg === "copiado" && <p className="text-center text-sm text-teal-400 mt-2">Campos preenchidos com o treino anterior. Ajuste as cargas e salve.</p>}
-          {msg === "erro" && <p className="text-center text-sm text-rose-400 mt-2">Não deu para salvar. Tente novamente.</p>}
+          {msg === "copiado" && <p className="text-center text-sm text-teal-400 mt-2">Preenchido com o último treino — ajuste e salve.</p>}
+          {msg === "erro" && <p className="text-center text-sm text-rose-400 mt-2">Não foi possível salvar. Seus dados continuam preenchidos — tente novamente.</p>}
         </div>
       )}
+
+      <RestTimer
+        secondsLeft={rest ? rest.secondsLeft : null}
+        totalSeconds={rest ? rest.total : null}
+        onSkip={() => setRest(null)}
+        onAdjust={(d) => setRest((r) => r && { ...r, secondsLeft: Math.max(0, r.secondsLeft + d), total: Math.max(r.total, r.secondsLeft + d) })}
+      />
     </div>
   );
 }

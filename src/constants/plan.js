@@ -62,10 +62,10 @@ export const DAYS = ["seg", "ter", "qua", "qui", "sex", "sab"];
 export const WEEKDAY_KEYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sab"];
 
 export const NAV = [
-  ["dashboard", "🏠", "Início"],
-  ["treino", "💪", "Treino"],
-  ["progresso", "📊", "Progresso"],
-  ["historico", "🕘", "Histórico"],
-  ["personagem", "🧙", "Personagem"],
-  ["perfil", "⚙️", "Perfil"],
+  ["dashboard", "home", "Início"],
+  ["treino", "dumbbell", "Treino"],
+  ["progresso", "chart", "Progresso"],
+  ["historico", "clock", "Histórico"],
+  ["personagem", "user", "Personagem"],
+  ["perfil", "sliders", "Perfil"],
 ];

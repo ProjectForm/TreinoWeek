@@ -50,8 +50,10 @@ export default function App() {
         />
       )}
 
-      <header className="px-4 pt-5 pb-3 border-b border-zinc-800">
-        <h1 className="text-xl font-bold tracking-wide text-rose-400">TREINO DA SEMANA</h1>
+      <header className="px-4 pt-5 pb-3 border-b divider">
+        <h1 className="text-lg font-semibold tracking-tight text-zinc-100">
+          Treino <span className="text-rose-400">da Semana</span>
+        </h1>
       </header>
 
       <NavBar view={view} setView={setView} />
@@ -63,15 +65,23 @@ export default function App() {
           logs={workout.logs}
           weeks={workout.weeks}
           date={workout.date}
+          bodyStats={workout.bodyStats}
           onStartWorkout={() => setView("treino")}
           onViewChange={setView}
         />
       )}
       {view === "treino" && <WorkoutForm plan={plan} workout={workout} />}
       {view === "progresso" && (
-        <ProgressView logs={workout.logs} exerciseHistory={workout.exerciseHistory} engineResult={gamification.engineResult} />
+        <ProgressView
+          logs={workout.logs}
+          exerciseHistory={workout.exerciseHistory}
+          engineResult={gamification.engineResult}
+          onStartWorkout={() => setView("treino")}
+        />
       )}
-      {view === "historico" && <HistoryView plan={plan} allSessions={workout.allSessions} />}
+      {view === "historico" && (
+        <HistoryView plan={plan} allSessions={workout.allSessions} onStartWorkout={() => setView("treino")} />
+      )}
       {view === "personagem" && (
         <CharacterView plan={plan} logs={workout.logs} weeks={workout.weeks} date={workout.date} gamification={gamification} />
       )}

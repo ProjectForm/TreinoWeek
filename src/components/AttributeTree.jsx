@@ -1,10 +1,11 @@
 import React from "react";
+import { Icon } from "./Icon.jsx";
 
 const NODES = [
-  { id: "forca", label: "Força", icon: "💪", x: 50, y: 15 },
-  { id: "condicionamento", label: "Condicionamento", icon: "🔥", x: 15, y: 50 },
-  { id: "disciplina", label: "Disciplina", icon: "🧠", x: 85, y: 50 },
-  { id: "consistencia", label: "Consistência", icon: "📈", x: 50, y: 85 },
+  { id: "forca", label: "Força", icon: "dumbbell", x: 50, y: 15 },
+  { id: "condicionamento", label: "Condicionamento", icon: "flame", x: 15, y: 50 },
+  { id: "disciplina", label: "Disciplina", icon: "target", x: 85, y: 50 },
+  { id: "consistencia", label: "Consistência", icon: "chart", x: 50, y: 85 },
 ];
 
 const CONNECTIONS = [
@@ -23,7 +24,7 @@ export function AttributeTree({ atributos }) {
   }));
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
+    <div className="surface-1 rounded-2xl p-4">
       <div className="relative h-48 w-full">
         <svg className="absolute inset-0 w-full h-full" style={{ zIndex: 1 }}>
           {CONNECTIONS.map(([fromId, toId], i) => {
@@ -46,18 +47,18 @@ export function AttributeTree({ atributos }) {
           >
             <div
               className={
-                "w-14 h-14 rounded-full flex items-center justify-center text-xl border-2 " +
-                (node.nivel >= 50 ? "border-amber-500 bg-amber-950" : node.nivel >= 25 ? "border-teal-500 bg-teal-950" : "border-zinc-700 bg-zinc-950")
+                "w-14 h-14 rounded-full flex items-center justify-center border-2 " +
+                (node.nivel >= 50 ? "border-amber-500 bg-amber-950 text-amber-400" : node.nivel >= 25 ? "border-teal-500 bg-teal-950 text-teal-400" : "border-zinc-700 bg-zinc-950 text-zinc-400")
               }
             >
-              {node.icon}
+              <Icon name={node.icon} size={20} />
             </div>
             <p className="text-xs text-zinc-400 mt-1 whitespace-nowrap">{node.label}</p>
             <p className="text-xs font-bold text-zinc-200">Nv. {node.nivel}</p>
           </div>
         ))}
       </div>
-      <p className="text-xs text-zinc-600 mt-2 text-center">Atributos se fortalecem entre si. Consistência é a raiz de tudo.</p>
+      <p className="text-xs text-zinc-500 mt-2 text-center">Atributos se fortalecem entre si. Consistência é a raiz de tudo.</p>
     </div>
   );
 }

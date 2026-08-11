@@ -1,9 +1,12 @@
 import React, { useMemo } from "react";
-import { DAYS } from "../constants/plan.js";
-import { weekdayFromISO, getWeekKey, getWeekDates } from "../utils/dates.js";
+import { weekdayFromISO, getWeekKey } from "../utils/dates.js";
+import { DEFAULT_BODY } from "../constants/config.js";
 import { NotificationPrompt } from "./NotificationPrompt.jsx";
+import { WeekStrip } from "./WeekStrip.jsx";
+import { MissaoAtiva } from "./MissaoAtiva.jsx";
+import { Icon } from "./Icon.jsx";
 
-export function Dashboard({ engineResult, plan, logs, weeks, date, onStartWorkout, onViewChange }) {
+export function Dashboard({ engineResult, plan, logs, weeks, date, bodyStats, onStartWorkout, onViewChange }) {
   const dayKey = weekdayFromISO(date);
   const todayPlan = plan[dayKey];
   const hasWorkoutToday = todayPlan && todayPlan.items && todayPlan.items.length > 0;
@@ -11,7 +14,6 @@ export function Dashboard({ engineResult, plan, logs, weeks, date, onStartWorkou
 
   const weekKey = useMemo(() => getWeekKey(date), [date]);
   const weekData = weeks[weekKey];
-  const weekDates = useMemo(() => getWeekDates(date), [date]);
 
   const sortedAttrs = useMemo(() => {
     const arr = Object.entries(engineResult.atributos || {});
@@ -22,113 +24,104 @@ export function Dashboard({ engineResult, plan, logs, weeks, date, onStartWorkou
   const step = engineResult.nivel >= 50 ? 10 : 5;
   const proximaMeta = engineResult.nivel >= 90 ? null : Math.ceil((engineResult.nivel + step) / step) * step;
 
+  const estimatedDuration = useMemo(() => {
+    if (!hasWorkoutToday) return 0;
+    const totalSets = todayPlan.items.reduce((a, it) => a + it.sets, 0);
+    const secPerSet = (bodyStats && bodyStats.secPerSet) || DEFAULT_BODY.secPerSet;
+    return Math.round((totalSets * secPerSet) / 60);
+  }, [hasWorkoutToday, todayPlan, bodyStats]);
+
   return (
-    <div className="px-4 pt-4 space-y-3">
+    <div className="px-4 pt-4 space-y-3 pb-2">
       <NotificationPrompt plan={plan} />
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-        <div className="flex items-center justify-between">
+      {/* Nível 1 — status do personagem, a informação de maior hierarquia */}
+      <div className="surface-1 shadow-soft rounded-2xl p-5">
+        <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs text-zinc-500 uppercase tracking-wide">{engineResult.patente}</p>
-            <p className="text-3xl font-bold text-white">LV. {engineResult.nivel}</p>
+            <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">{engineResult.patente}</p>
+            <p className="text-4xl font-bold text-zinc-50 mt-0.5 tabular-nums">LV {engineResult.nivel}</p>
           </div>
-          <div className="text-right">
-            <div className="flex items-center gap-1 text-teal-400">
-              <span className="text-lg">🔥</span>
-              <span className="font-bold text-xl">{engineResult.streakAtual}</span>
-            </div>
-            <p className="text-xs text-zinc-500">semanas</p>
+          <div className="flex items-center gap-1.5 text-zinc-300 mt-1">
+            <Icon name="flame" size={18} className="text-rose-400" filled />
+            <span className="font-semibold tabular-nums">{engineResult.streakAtual}</span>
+            <span className="text-xs text-zinc-500">sem.</span>
           </div>
         </div>
-        <div className="w-full bg-zinc-800 rounded-full h-2 mt-3">
+
+        <div className="w-full bg-zinc-800/80 rounded-full h-1.5 mt-4">
           <div
-            className="bg-rose-500 h-2 rounded-full transition-all duration-500"
+            className="bg-rose-400 h-1.5 rounded-full transition-all duration-500"
             style={{ width: `${engineResult.xpNecessario ? Math.min(100, (engineResult.xp / engineResult.xpNecessario) * 100) : 0}%` }}
           />
         </div>
-        <p className="text-xs text-zinc-600 mt-1">{engineResult.xp} / {engineResult.xpNecessario} XP</p>
+        <div className="flex items-center justify-between mt-1.5">
+          <p className="text-xs text-zinc-500 tabular-nums">{engineResult.xp} / {engineResult.xpNecessario} XP</p>
+          <p className="text-xs text-zinc-500">
+            {proximaMeta === null ? `${100 - engineResult.nivel} p/ ascensão` : `próx. LV ${proximaMeta}`}
+          </p>
+        </div>
+
         {engineResult.escudos > 0 && (
-          <div className="flex items-center gap-1 mt-2 text-blue-400">
-            <span>🛡️</span>
-            <span className="text-xs font-medium">{engineResult.escudos} escudo{engineResult.escudos > 1 ? "s" : ""}</span>
+          <div className="flex items-center gap-1.5 mt-3 pt-3 border-t divider">
+            <Icon name="shield" size={15} className="text-sky-400" filled />
+            <span className="text-xs text-zinc-400">{engineResult.escudos} escudo{engineResult.escudos > 1 ? "s" : ""} de proteção da streak</span>
           </div>
         )}
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-        <p className="text-xs text-zinc-500 uppercase tracking-wide mb-2">Próximo objetivo</p>
-        {proximaMeta === null ? (
-          <p className="text-sm text-amber-400 font-semibold">⚔️ Faltam {100 - engineResult.nivel} níveis para ascensão!</p>
-        ) : (
-          <p className="text-sm text-zinc-300">Meta: LV. {proximaMeta} — faltam {proximaMeta - engineResult.nivel} níveis</p>
-        )}
-        <p className="text-xs text-zinc-600 mt-1">{engineResult.semanasPerfeitasTotal} semanas perfeitas no total</p>
-      </div>
-
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-        <p className="text-xs text-zinc-500 uppercase tracking-wide mb-2">Hoje</p>
+      {/* Nível 1 — ação principal do app */}
+      <div className={"rounded-2xl p-5 " + (treinouHoje ? "surface-1" : "bg-gradient-to-b from-rose-500/[0.08] to-transparent surface-1 border-rose-500/20")}>
+        <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium mb-2">Hoje</p>
         {treinouHoje ? (
           <div className="flex items-center gap-2 text-teal-400">
-            <span className="text-lg">✓</span>
-            <p className="text-sm font-semibold">Treino completo!</p>
+            <Icon name="checkCircle" size={20} filled className="text-teal-400" />
+            <p className="text-sm font-semibold">Treino completo</p>
           </div>
         ) : hasWorkoutToday ? (
           <div>
-            <p className="text-sm text-zinc-300 mb-2">{todayPlan.muscle} — {todayPlan.items.length} exercícios</p>
-            <button onClick={onStartWorkout} className="w-full bg-rose-500 text-white font-bold py-3 rounded-xl active:scale-95 transition-transform">
+            <p className="text-lg font-semibold text-zinc-100">{todayPlan.muscle}</p>
+            <p className="text-sm text-zinc-500 mt-0.5">
+              {todayPlan.items.length} exercícios{estimatedDuration ? ` · ~${estimatedDuration} min` : ""}
+            </p>
+            <button onClick={onStartWorkout} className="press w-full bg-rose-500 text-white font-semibold py-3.5 rounded-xl mt-4">
               Iniciar treino
             </button>
           </div>
         ) : (
-          <p className="text-sm text-zinc-500">Dia de descanso 💤</p>
+          <p className="text-sm text-zinc-500">Dia de descanso. Aproveite para recuperar.</p>
         )}
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-        <p className="text-xs text-zinc-500 uppercase tracking-wide mb-2">Esta semana</p>
-        <div className="flex gap-1">
-          {DAYS.map((d) => {
-            const planDia = plan[d];
-            const temTreino = planDia && planDia.items && planDia.items.length > 0;
-            const isoDia = weekDates.find((wd) => weekdayFromISO(wd) === d);
-            const treinou = isoDia && logs[isoDia] && logs[isoDia].status === "completed";
-            return (
-              <div
-                key={d}
-                className={
-                  "flex-1 text-center py-2 rounded-lg text-xs font-bold " +
-                  (!temTreino ? "bg-zinc-950 text-zinc-700" :
-                    treinou ? "bg-teal-900 text-teal-400" :
-                    d === dayKey ? "bg-rose-900 text-rose-400" :
-                    "bg-zinc-800 text-zinc-500")
-                }
-              >
-                {planDia ? planDia.label : d}
-              </div>
-            );
-          })}
-        </div>
-        <p className="text-xs text-zinc-600 mt-2">
+      {/* Nível 2 — semana e missão */}
+      <div className="surface-1 rounded-2xl p-4">
+        <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium mb-2.5">Esta semana</p>
+        <WeekStrip date={date} plan={plan} logs={logs} readOnly />
+        <p className="text-xs text-zinc-500 mt-2.5">
           {weekData ? `${weekData.completedDays?.length || 0}/${weekData.plannedDays?.length || 0} treinos completos` : "Nenhum treino registrado nesta semana ainda."}
         </p>
       </div>
 
+      <MissaoAtiva plan={plan} logs={logs} weeks={weeks} date={date} engineResult={engineResult} />
+
+      {/* Nível 3 — detalhe simples, sem card próprio */}
       {attrDestaque && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-4">
-          <p className="text-xs text-zinc-500 uppercase tracking-wide mb-1">Atributo em desenvolvimento</p>
-          <p className="text-sm text-zinc-300 capitalize">{attrDestaque[0]} — Nv. {attrDestaque[1]?.nivel || 0}</p>
-          <p className="text-xs text-zinc-600 mt-1">Foque neste atributo treinando com consistência.</p>
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-zinc-500">
+            Foco atual: <span className="text-zinc-300 capitalize font-medium">{attrDestaque[0]}</span>
+          </p>
+          <p className="text-xs text-zinc-500">Nv. {attrDestaque[1]?.nivel || 0}</p>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={() => onViewChange("personagem")} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-left active:scale-95 transition-transform">
-          <p className="text-xs text-zinc-500">Ver personagem</p>
-          <p className="text-sm font-bold text-zinc-200 mt-1">Atributos e conquistas →</p>
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <button onClick={() => onViewChange("personagem")} className="press surface-1 rounded-xl p-3 text-left">
+          <p className="text-xs text-zinc-500">Personagem</p>
+          <p className="text-sm font-semibold text-zinc-200 mt-0.5">Atributos e conquistas</p>
         </button>
-        <button onClick={() => onViewChange("historico")} className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 text-left active:scale-95 transition-transform">
+        <button onClick={() => onViewChange("historico")} className="press surface-1 rounded-xl p-3 text-left">
           <p className="text-xs text-zinc-500">Histórico</p>
-          <p className="text-sm font-bold text-zinc-200 mt-1">{Object.keys(logs).length} treinos →</p>
+          <p className="text-sm font-semibold text-zinc-200 mt-0.5">{Object.keys(logs).length} treinos</p>
         </button>
       </div>
     </div>

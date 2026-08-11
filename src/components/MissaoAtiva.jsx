@@ -1,5 +1,6 @@
 import React from "react";
 import { getWeekKey, weekdayFromISO } from "../utils/dates.js";
+import { Icon } from "./Icon.jsx";
 
 export function MissaoAtiva({ plan, logs, weeks, date, engineResult }) {
   const dayKeyHoje = weekdayFromISO(date);
@@ -20,9 +21,12 @@ export function MissaoAtiva({ plan, logs, weeks, date, engineResult }) {
   }
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-3 mt-3">
-      <p className="text-xs text-amber-400 uppercase tracking-wide">Missão {missao.titulo}</p>
-      <p className="text-sm text-zinc-100 mt-1">{missao.texto}</p>
+    <div className="surface-1 rounded-2xl p-4">
+      <div className="flex items-center gap-2 mb-1.5">
+        <Icon name="target" size={15} className="text-amber-400" />
+        <p className="text-[11px] text-amber-400 uppercase tracking-wide font-medium">Missão {missao.titulo}</p>
+      </div>
+      <p className="text-sm text-zinc-200">{missao.texto}</p>
     </div>
   );
 }

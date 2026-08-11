@@ -16,14 +16,14 @@ export function NotificationPrompt({ plan }) {
   }
 
   return (
-    <div className="bg-zinc-900 border border-amber-700 rounded-xl p-4 animate-fadeIn">
-      <p className="text-sm text-amber-400 font-semibold">Ativar lembretes?</p>
-      <p className="text-xs text-zinc-400 mt-1">O app pode te lembrar dos treinos e avisar quando a streak está em risco.</p>
-      <div className="flex gap-2 mt-2">
-        <button onClick={handleEnable} className="flex-1 bg-amber-500 text-zinc-900 text-xs font-bold px-4 py-2 rounded-lg active:scale-95 transition-transform">
+    <div className="surface-1 rounded-2xl p-4 animate-fadeIn">
+      <p className="text-sm text-zinc-100 font-semibold">Ativar lembretes?</p>
+      <p className="text-xs text-zinc-500 mt-1">O app pode te lembrar dos treinos e avisar quando a streak está em risco.</p>
+      <div className="flex gap-2 mt-3">
+        <button onClick={handleEnable} className="press flex-1 bg-rose-500 text-white text-xs font-semibold px-4 py-2.5 rounded-lg">
           Ativar notificações
         </button>
-        <button onClick={() => setDismissed(true)} className="px-4 py-2 text-xs text-zinc-500">
+        <button onClick={() => setDismissed(true)} className="press px-4 py-2.5 text-xs text-zinc-500 font-medium">
           Agora não
         </button>
       </div>
