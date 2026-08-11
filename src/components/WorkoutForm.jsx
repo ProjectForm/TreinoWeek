@@ -211,11 +211,15 @@ export function WorkoutForm({ plan, workout }) {
                         </div>
                       </div>
                     ) : (
-                      <div key={i} className="flex items-center gap-1 w-full mb-2">
-                        <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
-                        <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
-                        <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
-                        <button onClick={() => removeSet(item.id, i)} className="px-1 text-zinc-600 text-lg shrink-0">&minus;</button>
+                      <div key={i} className="mb-2">
+                        <div className="flex items-center gap-1 w-full">
+                          <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
+                          <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
+                        </div>
+                        <div className="flex items-center gap-1 w-full mt-1 pl-5">
+                          <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
+                          <button onClick={() => removeSet(item.id, i)} className="px-2 text-zinc-600 text-xs shrink-0">remover série</button>
+                        </div>
                       </div>
                     )
                   )}
