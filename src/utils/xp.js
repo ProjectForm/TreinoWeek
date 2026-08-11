@@ -2,7 +2,7 @@ import { RPG_CONFIG, RANKS } from "../constants/config.js";
 import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { ACHIEVEMENT_DEFS, TITULO_DEFS } from "../constants/achievements.js";
-import { tonnageOf } from "./stats.js";
+import { tonnageOf, effectiveWeight } from "./stats.js";
 import { getWeekKey } from "./dates.js";
 
 export function buildCumulative(base, exp, maxN) {
@@ -220,7 +220,7 @@ export function computePlayerStateEngine(logs, weeks) {
     if (exIds.length === 0) return;
     const sets = [];
     exIds.forEach((id) => (data.exercises[id].sets || []).forEach((s) => {
-      const w = parseFloat(s.weight) || 0, rp = parseFloat(s.reps) || 0;
+      const w = effectiveWeight(s), rp = parseFloat(s.reps) || 0;
       if (w > 0) sets.push({ exId: id, weight: w, reps: rp });
     }));
     totalTreinosCompletos++;
@@ -230,7 +230,7 @@ export function computePlayerStateEngine(logs, weeks) {
     const cal = computeCaloriasXPRpg(kcalTreino);
     const cargaAtualPorExercicio = {};
     exIds.forEach((id) => {
-      cargaAtualPorExercicio[id] = Math.max.apply(null, (data.exercises[id].sets || []).map((s) => parseFloat(s.weight) || 0));
+      cargaAtualPorExercicio[id] = Math.max.apply(null, (data.exercises[id].sets || []).map((s) => effectiveWeight(s)));
     });
     const evo = computeEvolucaoXPRpg(exIds, cargaAtualPorExercicio, historicoPorExercicio);
 

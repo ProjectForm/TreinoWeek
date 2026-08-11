@@ -68,7 +68,9 @@ export default function App() {
         />
       )}
       {view === "treino" && <WorkoutForm plan={plan} workout={workout} />}
-      {view === "progresso" && <ProgressView logs={workout.logs} exerciseHistory={workout.exerciseHistory} />}
+      {view === "progresso" && (
+        <ProgressView logs={workout.logs} exerciseHistory={workout.exerciseHistory} engineResult={gamification.engineResult} />
+      )}
       {view === "historico" && <HistoryView plan={plan} allSessions={workout.allSessions} />}
       {view === "personagem" && (
         <CharacterView plan={plan} logs={workout.logs} weeks={workout.weeks} date={workout.date} gamification={gamification} />

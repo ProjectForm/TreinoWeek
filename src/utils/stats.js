@@ -1,18 +1,29 @@
 import { CARDIO_MET, MET_MUSCULACAO, DEFAULT_BODY } from "../constants/config.js";
 
+// Peso "efetivo" de uma série: para exercícios normais é só o peso; para
+// unilaterais (que guardam weight=E e weightD=D) é a soma dos dois lados,
+// que é a base de volume = (peso_E + peso_D) * reps. Como weightD é
+// undefined em séries não-unilaterais, isso equivale exatamente ao
+// comportamento antigo (parseFloat(s.weight) || 0) para todo o resto do app.
+export function effectiveWeight(s) {
+  const w = parseFloat(s.weight) || 0;
+  const wd = parseFloat(s.weightD) || 0;
+  return w + wd;
+}
+
 export function tonnageOf(sets) {
   return (sets || []).reduce((acc, s) => {
-    const w = parseFloat(s.weight) || 0;
+    const w = effectiveWeight(s);
     const r = parseFloat(s.reps) || 0;
     return w > 0 ? acc + w * r : acc;
   }, 0);
 }
 
 export function statsOf(sets) {
-  const valid = (sets || []).filter((s) => parseFloat(s.weight) > 0);
+  const valid = (sets || []).filter((s) => effectiveWeight(s) > 0);
   if (!valid.length) return null;
-  const weights = valid.map((s) => parseFloat(s.weight));
-  const volume = valid.reduce((acc, s) => acc + (parseFloat(s.weight) || 0) * (parseFloat(s.reps) || 0), 0);
+  const weights = valid.map((s) => effectiveWeight(s));
+  const volume = valid.reduce((acc, s) => acc + effectiveWeight(s) * (parseFloat(s.reps) || 0), 0);
   return { max: Math.max.apply(null, weights), count: valid.length, volume: volume, sets: valid };
 }
 
@@ -39,7 +50,7 @@ export function computeMeta(entries, planItems) {
     const sets = entries[item.id] || [];
     const t = tonnageOf(sets);
     if (t > 0) totalExercisesCompleted++;
-    totalSets += sets.filter((s) => parseFloat(s.weight) > 0).length;
+    totalSets += sets.filter((s) => effectiveWeight(s) > 0).length;
     totalVolume += t;
   });
   return { totalExercisesPlanned, totalExercisesCompleted, totalSets, totalVolume };

@@ -2,7 +2,7 @@ import React from "react";
 import { DAYS } from "../constants/plan.js";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
-import { formatBR, formatWeight, agoLabel } from "../utils/formatters.js";
+import { formatBR, formatWeight, agoLabel, formatSet } from "../utils/formatters.js";
 import { weekdayFromISO } from "../utils/dates.js";
 import { tonnageOf, sanitizeMinutes } from "../utils/stats.js";
 import { WeightInput } from "./WeightInput.jsx";
@@ -183,7 +183,7 @@ export function WorkoutForm({ plan, workout }) {
                     </p>
                     {last.sets && last.sets.length > 0 && (
                       <p className="text-xs text-zinc-500 mt-1">
-                        {last.sets.map((s) => s.weight + "kg x " + (s.reps || "-")).join("   ")}
+                        {last.sets.map((s) => formatSet(s)).join("   ")}
                       </p>
                     )}
                     {last.baseline && (
@@ -195,14 +195,30 @@ export function WorkoutForm({ plan, workout }) {
                 )}
 
                 <div className="mt-3">
-                  {sets.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2 mb-2">
-                      <span className="text-xs text-zinc-500 w-4">{i + 1}</span>
-                      <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
-                      <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
-                      <button onClick={() => removeSet(item.id, i)} className="px-2 py-1 text-zinc-600 text-lg shrink-0">&minus;</button>
-                    </div>
-                  ))}
+                  {sets.map((s, i) =>
+                    item.unilateral ? (
+                      <div key={i} className="mb-2">
+                        <div className="flex items-center gap-1 w-full">
+                          <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
+                          <span className="text-[10px] text-zinc-600 shrink-0">E</span>
+                          <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
+                          <span className="text-[10px] text-zinc-600 shrink-0">D</span>
+                          <WeightInput value={s.weightD} onChange={(v) => updateSet(item.id, i, "weightD", v)} />
+                        </div>
+                        <div className="flex items-center gap-1 w-full mt-1 pl-5">
+                          <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
+                          <button onClick={() => removeSet(item.id, i)} className="px-2 text-zinc-600 text-xs shrink-0">remover série</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={i} className="flex items-center gap-1 w-full mb-2">
+                        <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
+                        <WeightInput value={s.weight} onChange={(v) => updateSet(item.id, i, "weight", v)} />
+                        <RepsInput value={s.reps} onChange={(v) => updateSet(item.id, i, "reps", v)} />
+                        <button onClick={() => removeSet(item.id, i)} className="px-1 text-zinc-600 text-lg shrink-0">&minus;</button>
+                      </div>
+                    )
+                  )}
                   <button onClick={() => addSet(item.id)} className="text-xs text-zinc-400 mt-1">+ adicionar série</button>
                 </div>
               </div>

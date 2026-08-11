@@ -1,7 +1,7 @@
 import React from "react";
 import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
 import { ACHIEVEMENT_DEFS, TITULO_DEFS } from "../constants/achievements.js";
-import { Avatar } from "./Avatar.jsx";
+import { MinimalAvatar } from "./MinimalAvatar.jsx";
 import { StreakBadge } from "./StreakBadge.jsx";
 import { AttributeTree } from "./AttributeTree.jsx";
 import { MissaoAtiva } from "./MissaoAtiva.jsx";
@@ -12,7 +12,7 @@ export function CharacterView({ plan, logs, weeks, date, gamification }) {
 
   return (
     <div className="px-4 pt-4">
-      <Avatar nivel={engineResult.nivel} atributos={engineResult.atributos} />
+      <MinimalAvatar nivel={engineResult.nivel} atributos={engineResult.atributos} />
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-center mt-3">
         <p className="text-xs text-zinc-500 uppercase tracking-wide">{engineResult.patente}</p>

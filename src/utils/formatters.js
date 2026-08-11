@@ -24,3 +24,12 @@ export function formatWeight(kg) {
   if (kg >= 1000) return (kg / 1000).toFixed(1).replace(".", ",") + " toneladas";
   return Math.round(kg) + " kg";
 }
+
+// Séries unilaterais guardam weightD (peso do lado direito) além de weight
+// (esquerdo) — exibe os dois lados separados; séries normais ficam como antes.
+export function formatSet(s) {
+  if (s.weightD !== undefined) {
+    return "E:" + (s.weight || 0) + "kg/D:" + (s.weightD || 0) + "kg x " + (s.reps || "-");
+  }
+  return s.weight + "kg x " + (s.reps || "-");
+}

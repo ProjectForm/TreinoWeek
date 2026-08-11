@@ -199,10 +199,16 @@ export function useWorkoutData(plan, planReady) {
     items.forEach((item) => {
       const prev = saved && saved.exercises && saved.exercises[item.id];
       if (prev && prev.sets && prev.sets.length) {
-        next[item.id] = prev.sets.map((s) => ({ weight: s.weight || "", reps: s.reps || "" }));
+        next[item.id] = prev.sets.map((s) =>
+          item.unilateral
+            ? { weight: s.weight || "", weightD: s.weightD || "", reps: s.reps || "" }
+            : { weight: s.weight || "", reps: s.reps || "" }
+        );
       } else {
         next[item.id] = [];
-        for (let i = 0; i < item.sets; i++) next[item.id].push({ weight: "", reps: item.reps });
+        for (let i = 0; i < item.sets; i++) {
+          next[item.id].push(item.unilateral ? { weight: "", weightD: "", reps: item.reps } : { weight: "", reps: item.reps });
+        }
       }
     });
     setEntries(next);
@@ -211,7 +217,7 @@ export function useWorkoutData(plan, planReady) {
   }, [day, date, ready, logs, plan]);
 
   function updateSet(exId, idx, field, value) {
-    const clean = field === "weight" ? sanitizeWeight(value) : sanitizeReps(value);
+    const clean = field === "reps" ? sanitizeReps(value) : sanitizeWeight(value);
     setEntries((prev) => ({
       ...prev,
       [exId]: (prev[exId] || []).map((s, i) => (i === idx ? { ...s, [field]: clean } : s)),
@@ -221,7 +227,12 @@ export function useWorkoutData(plan, planReady) {
     setEntries((prev) => {
       const list = prev[exId] ? prev[exId].slice() : [];
       const last = list[list.length - 1];
-      list.push({ weight: "", reps: last ? last.reps : "" });
+      const item = ((plan[day] && plan[day].items) || []).find((it) => it.id === exId);
+      list.push(
+        item && item.unilateral
+          ? { weight: "", weightD: "", reps: last ? last.reps : "" }
+          : { weight: "", reps: last ? last.reps : "" }
+      );
       return { ...prev, [exId]: list };
     });
   }
@@ -241,10 +252,16 @@ export function useWorkoutData(plan, planReady) {
     items.forEach((item) => {
       const prev = src.exercises && src.exercises[item.id];
       if (prev && prev.sets && prev.sets.length) {
-        next[item.id] = prev.sets.map((s) => ({ weight: s.weight || "", reps: s.reps || "" }));
+        next[item.id] = prev.sets.map((s) =>
+          item.unilateral
+            ? { weight: s.weight || "", weightD: s.weightD || "", reps: s.reps || "" }
+            : { weight: s.weight || "", reps: s.reps || "" }
+        );
       } else {
         next[item.id] = [];
-        for (let i = 0; i < item.sets; i++) next[item.id].push({ weight: "", reps: item.reps });
+        for (let i = 0; i < item.sets; i++) {
+          next[item.id].push(item.unilateral ? { weight: "", weightD: "", reps: item.reps } : { weight: "", reps: item.reps });
+        }
       }
     });
     setEntries(next);
