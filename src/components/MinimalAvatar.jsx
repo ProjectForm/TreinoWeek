@@ -28,11 +28,9 @@ const STAGE_PARAMS = [
   { shoulder: 23, waist: 10.5, bicep: 6.4, quad: 6.5, abLines: 3 },
 ];
 
-// Ilustração vetorial com proporções humanas, sombreado em gradiente e
-// definição muscular crescente por estágio (silhueta com deltoides, bíceps,
-// quadríceps e linhas abdominais, não só formas geométricas planas). Continua
-// sendo um desenho vetorial 2D — não um render 3D — mas bem mais trabalhado
-// que a versão anterior.
+// Ilustração vetorial com proporções humanas, sombreado em gradiente,
+// brilho de definição muscular, shorts e sombra no chão. Continua sendo um
+// desenho vetorial 2D — não um render 3D —, mas bem mais trabalhado.
 export function MinimalAvatar({ nivel, atributos }) {
   const estagio = nivel >= 100 ? 5 : nivel >= 75 ? 4 : nivel >= 50 ? 3 : nivel >= 25 ? 2 : 1;
   const dominante = Object.entries(atributos || {}).sort((a, b) => (b[1]?.nivel || 0) - (a[1]?.nivel || 0))[0];
@@ -61,6 +59,9 @@ export function MinimalAvatar({ nivel, atributos }) {
         {estagio >= 4 && (
           <circle cx={cx} cy="96" r="66" fill="none" stroke={cor} strokeWidth="1" opacity="0.22" />
         )}
+
+        {/* sombra no chão */}
+        <ellipse cx={cx} cy="166" rx="26" ry="4" fill="#000000" opacity="0.35" />
 
         {/* perna esquerda */}
         <g>
@@ -97,6 +98,17 @@ export function MinimalAvatar({ nivel, atributos }) {
           fill={`url(#${gradId})`}
         />
 
+        {/* brilho diagonal no torso (dá sensação de volume/definição) */}
+        <path
+          d={`M ${cx - p.shoulder + 4} ${shoulderY + 3}
+              L ${cx - 2} ${shoulderY + 3}
+              L ${cx - p.waist * 0.35} ${waistY - 6}
+              L ${cx - p.shoulder + 9} ${waistY - 12}
+              Z`}
+          fill="#ffffff"
+          opacity="0.1"
+        />
+
         {/* linha central do peito/abdômen */}
         {p.abLines > 0 && (
           <line x1={cx} y1={shoulderY + 12} x2={cx} y2={waistY - 4} stroke={darkShade} strokeWidth="1" opacity="0.3" />
@@ -120,6 +132,20 @@ export function MinimalAvatar({ nivel, atributos }) {
           stroke={darkShade}
           strokeWidth="1"
           opacity="0.25"
+        />
+
+        {/* shorts */}
+        <path
+          d={`M ${cx - p.waist - 3} ${waistY - 3}
+              L ${cx + p.waist + 3} ${waistY - 3}
+              L ${cx + p.waist * 0.62 + 8} ${hipY + 22}
+              L ${cx - p.waist * 0.62 - 8} ${hipY + 22}
+              Z`}
+          fill="#52525b"
+        />
+        <line
+          x1={cx - p.waist - 2} y1={waistY - 2} x2={cx + p.waist + 2} y2={waistY - 2}
+          stroke={cor} strokeWidth="1.5" opacity="0.8"
         />
 
         {/* pescoço */}
