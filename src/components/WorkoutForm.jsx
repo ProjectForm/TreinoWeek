@@ -37,7 +37,7 @@ export function WorkoutForm({ plan, workout }) {
   const {
     date, setDate, day, logs,
     entries, caffeine, setCaffeine, cardio, setCardio,
-    updateSet, addSet, removeSet, repeatPrevious, previousSameDay, lastByExercise,
+    updateSet, addSet, removeSet, repeatPrevious, repeatExercise, previousSameDay, lastByExercise,
     groupVolumesLive, totalTonnage, musculKcalInfo, cardioKcal, totalKcal,
     saving, msg, save,
   } = workout;
@@ -47,10 +47,27 @@ export function WorkoutForm({ plan, workout }) {
   const [expandedOverrides, setExpandedOverrides] = useState({});
   const [setupOpen, setSetupOpen] = useState(false);
   const [rest, setRest] = useState(null); // { total, secondsLeft }
+  const [autoFilled, setAutoFilled] = useState(() => new Set());
 
   useEffect(() => {
     setExpandedOverrides({});
+    setAutoFilled(new Set());
   }, [date]);
+
+  function handleRepeatExercise(item) {
+    const ok = repeatExercise(item.id);
+    if (!ok) return;
+    const hist = lastByExercise[item.id];
+    setAutoFilled((prev) => {
+      const next = new Set(prev);
+      (hist.sets || []).forEach((_, idx) => next.add(item.id + ":" + idx));
+      return next;
+    });
+    // Mantém expandido mesmo que o preenchimento automático já complete todas
+    // as séries — senão o exercício colapsaria na hora, escondendo os badges
+    // "auto" bem no momento em que o usuário precisa revisar antes de confirmar.
+    setExpandedOverrides((prev) => ({ ...prev, [item.id]: true }));
+  }
 
   useEffect(() => {
     if (!rest) return;
@@ -71,7 +88,20 @@ export function WorkoutForm({ plan, workout }) {
     const wasComplete = isSetComplete(item, before);
     const nowComplete = isSetComplete(item, after);
     updateSet(item.id, idx, field, value);
+
+    const autoKey = item.id + ":" + idx;
+    if (autoFilled.has(autoKey)) {
+      setAutoFilled((prev) => {
+        const next = new Set(prev);
+        next.delete(autoKey);
+        return next;
+      });
+    }
+
     if (!wasComplete && nowComplete) {
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try { navigator.vibrate(25); } catch (e) {}
+      }
       setRest({ total: DEFAULT_REST_SECONDS, secondsLeft: DEFAULT_REST_SECONDS });
     }
   }
@@ -207,13 +237,22 @@ export function WorkoutForm({ plan, workout }) {
                   {exTonnage > 0 && <p className="text-xs text-teal-400 font-medium shrink-0">{formatWeight(exTonnage)}</p>}
                 </div>
 
-                {last && (
+                {last ? (
                   <div className="mt-3 surface-2 rounded-xl px-3 py-2.5">
-                    <p className="text-xs text-zinc-400">
-                      Último treino ({agoLabel(last.date, date)}) · máx {last.max} kg
-                      {last.caffeine === true ? " · com cafeína" : ""}
-                      {last.caffeine === false ? " · sem cafeína" : ""}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs text-zinc-400">
+                        Último treino ({agoLabel(last.date, date)}) · máx {last.max} kg
+                        {last.caffeine === true ? " · com cafeína" : ""}
+                        {last.caffeine === false ? " · sem cafeína" : ""}
+                      </p>
+                      <button
+                        onClick={() => handleRepeatExercise(item)}
+                        className="press shrink-0 flex items-center gap-1 bg-zinc-800 text-zinc-200 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg"
+                      >
+                        <Icon name="clock" size={12} />
+                        Repetir último
+                      </button>
+                    </div>
                     {last.sets && last.sets.length > 0 && (
                       <p className="text-xs text-zinc-500 mt-1">{last.sets.map((s) => formatSet(s)).join("   ")}</p>
                     )}
@@ -221,11 +260,16 @@ export function WorkoutForm({ plan, workout }) {
                       <p className="text-xs text-zinc-500 mt-1">Média (últimas {last.baseline.count}): {last.baseline.avgMax.toFixed(1)} kg</p>
                     )}
                   </div>
+                ) : (
+                  <p className="text-[11px] text-zinc-600 mt-3" aria-disabled="true" title="Ainda não há um treino anterior deste exercício para repetir">
+                    Primeiro treino detectado — sem histórico pra repetir ainda.
+                  </p>
                 )}
 
                 <div className="mt-3 space-y-1">
                   {sets.map((s, i) => {
                     const done = isSetComplete(item, s);
+                    const isAuto = autoFilled.has(item.id + ":" + i);
                     return (
                       <div key={i} className={"rounded-xl px-1.5 py-1.5 " + (done ? "bg-teal-400/[0.06]" : "")}>
                         {item.unilateral ? (
@@ -244,12 +288,29 @@ export function WorkoutForm({ plan, workout }) {
                         )}
                         <div className="flex items-center gap-1 w-full mt-1 pl-5">
                           <RepsInput value={s.reps} onChange={(v) => handleSetChange(item, i, "reps", v)} />
+                          {isAuto && (
+                            <span className="text-[9px] font-bold text-amber-400 bg-amber-400/10 rounded px-1 py-0.5 shrink-0" title="Preenchido automaticamente pelo 'Repetir último'">
+                              auto
+                            </span>
+                          )}
                           {done ? (
                             <Icon name="checkCircle" size={16} className="text-teal-400 shrink-0" />
                           ) : (
                             <span className="w-4 shrink-0" aria-hidden="true" />
                           )}
-                          <button onClick={() => removeSet(item.id, i)} aria-label={`Remover série ${i + 1}`} className="ml-auto px-2 text-zinc-500 text-xs shrink-0">
+                          <button
+                            onClick={() => {
+                              removeSet(item.id, i);
+                              setAutoFilled((prev) => {
+                                let changed = false;
+                                const next = new Set();
+                                prev.forEach((key) => { if (key.startsWith(item.id + ":")) changed = true; else next.add(key); });
+                                return changed ? next : prev;
+                              });
+                            }}
+                            aria-label={`Remover série ${i + 1}`}
+                            className="ml-auto px-2 text-zinc-500 text-xs shrink-0"
+                          >
                             remover
                           </button>
                         </div>

@@ -242,6 +242,24 @@ export function useWorkoutData(plan, planReady) {
       return { ...prev, [exId]: list };
     });
   }
+  // Repete só um exercício, usando a última vez que ele foi feito (qualquer
+  // dia, via lastByExercise) — diferente de repeatPrevious, que repete o
+  // treino inteiro do mesmo dia da semana.
+  function repeatExercise(exId) {
+    const hist = lastByExercise[exId];
+    if (!hist || !hist.sets || !hist.sets.length) return false;
+    const item = ((plan[day] && plan[day].items) || []).find((it) => it.id === exId);
+    setEntries((prev) => ({
+      ...prev,
+      [exId]: hist.sets.map((s) =>
+        item && item.unilateral
+          ? { weight: s.weight || "", weightD: s.weightD || "", reps: s.reps || "" }
+          : { weight: s.weight || "", reps: s.reps || "" }
+      ),
+    }));
+    return true;
+  }
+
   function repeatPrevious() {
     if (!previousSameDay) return;
     const src = logs[previousSameDay];
@@ -436,7 +454,7 @@ export function useWorkoutData(plan, planReady) {
     logs, weeks, exerciseHistory, lastWorkoutByExercise, userCreatedAt,
     bodyStats, setBodyStats, saveProfile, profileMsg,
     entries, caffeine, setCaffeine, cardio, setCardio,
-    updateSet, addSet, removeSet, repeatPrevious, previousSameDay, lastByExercise,
+    updateSet, addSet, removeSet, repeatPrevious, repeatExercise, previousSameDay, lastByExercise,
     groupVolumesLive, totalTonnage, musculKcalInfo, cardioKcal, totalKcal,
     ready, saving, msg, save,
     showSummary, setShowSummary, summaryData,
