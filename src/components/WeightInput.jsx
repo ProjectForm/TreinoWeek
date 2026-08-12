@@ -2,17 +2,20 @@ import React from "react";
 
 // Sanitização (limites, arredondamento) fica a cargo de quem chama onChange
 // (updateSet, em useWorkoutData.js) — aqui só calcula o próximo valor bruto.
-// Tamanhos compactos (36px botão / 40px input) pra caber em telas de 320px
-// mesmo em linhas com dois campos de peso (exercícios unilaterais).
-export function WeightInput({ value, onChange, placeholder }) {
+// §16: botões de 44×44px (mínimo do design system), valor central com pelo
+// menos 64px de largura. size="large" é usado na série atual em foco (§15,
+// números de 28-32px); size="default" nas demais linhas da lista.
+const VALUE_SIZE = { default: "text-lg", large: "text-[28px] leading-none" };
+
+export function WeightInput({ value, onChange, placeholder, size = "default" }) {
   const num = parseFloat(value) || 0;
   return (
-    <div className="flex items-center gap-0.5 flex-1 min-w-0">
+    <div className="flex items-center gap-2 flex-1 min-w-0">
       <button
         type="button"
         onClick={() => onChange(String(Math.max(0, num - 2.5)))}
-        aria-label="Diminuir peso em 2,5kg"
-        className="stepper-btn shrink-0 bg-zinc-800 rounded text-zinc-400 text-sm active:bg-zinc-700 active:scale-95 transition-transform flex items-center justify-center"
+        aria-label="Diminuir peso em 2,5 quilogramas"
+        className="press w-11 h-11 shrink-0 rounded-[var(--radius-sm)] bg-surface-2 text-ink-secondary text-xl flex items-center justify-center"
       >
         −
       </button>
@@ -24,13 +27,17 @@ export function WeightInput({ value, onChange, placeholder }) {
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || "kg"}
         aria-label={"Peso em " + (placeholder || "kg")}
-        className="stepper-input flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded px-1 text-center text-sm text-zinc-100 font-bold outline-none focus:border-rose-500"
+        className={
+          "min-w-[64px] flex-1 h-11 bg-transparent text-center font-bold text-ink-primary outline-none rounded-[var(--radius-xs)] " +
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-400 focus-visible:outline-offset-2 " +
+          VALUE_SIZE[size]
+        }
       />
       <button
         type="button"
         onClick={() => onChange(String(num + 2.5))}
-        aria-label="Aumentar peso em 2,5kg"
-        className="stepper-btn shrink-0 bg-zinc-800 rounded text-zinc-400 text-sm active:bg-zinc-700 active:scale-95 transition-transform flex items-center justify-center"
+        aria-label="Aumentar peso em 2,5 quilogramas"
+        className="press w-11 h-11 shrink-0 rounded-[var(--radius-sm)] bg-surface-2 text-ink-secondary text-xl flex items-center justify-center"
       >
         +
       </button>

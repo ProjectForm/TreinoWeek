@@ -51,9 +51,9 @@ export default function App() {
         />
       )}
 
-      <header className="px-4 pt-5 pb-3 border-b divider">
-        <h1 className="text-lg font-semibold tracking-tight text-zinc-100">
-          Treino <span className="text-rose-400">da Semana</span>
+      <header className="px-4 pt-5 pb-3 border-b border-line-subtle">
+        <h1 className="text-lg font-semibold tracking-tight text-ink-primary">
+          Treino <span className="text-primary-400">da Semana</span>
         </h1>
       </header>
 

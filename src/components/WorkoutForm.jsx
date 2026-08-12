@@ -10,6 +10,8 @@ import { WeekStrip } from "./WeekStrip.jsx";
 import { RestTimer } from "./RestTimer.jsx";
 import { Icon } from "./Icon.jsx";
 import { Switch } from "./Switch.jsx";
+import { Button } from "./ui/Button.jsx";
+import { Badge } from "./ui/Badge.jsx";
 
 // Unilateral agora é uma escolha por sessão (guardada no formato do próprio
 // set — weightD presente ou não), então essas funções recebem um boolean já
@@ -33,9 +35,9 @@ function ToggleBtn({ active, onClick, children, className = "" }) {
     <button
       onClick={onClick}
       className={
-        "flex-1 py-2.5 rounded-xl text-sm font-semibold press " +
+        "flex-1 py-2.5 rounded-[var(--radius-md)] text-sm font-semibold press " +
         className + " " +
-        (active ? "bg-rose-500 text-white" : "surface-2 text-zinc-400")
+        (active ? "bg-primary-600 text-white" : "bg-surface-2 text-ink-tertiary")
       }
     >
       {children}
@@ -108,6 +110,8 @@ export function WorkoutForm({ plan, workout }) {
       });
     }
 
+    // Haptic reservado a momentos de fato relevantes (§29): conclusão de
+    // série. Ajustes de +/- isolados (que não completam a série) não vibram.
     if (!wasComplete && nowComplete) {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         try { navigator.vibrate(25); } catch (e) { /* haptics não suportado neste dispositivo */ }
@@ -118,6 +122,13 @@ export function WorkoutForm({ plan, workout }) {
 
   function toggleExpanded(id, defaultVal) {
     setExpandedOverrides((prev) => ({ ...prev, [id]: prev[id] === undefined ? !defaultVal : !prev[id] }));
+  }
+
+  function handleSave() {
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      try { navigator.vibrate(40); } catch (e) { /* haptics não suportado neste dispositivo */ }
+    }
+    save();
   }
 
   const focusItem = info.items.find((item) => {
@@ -133,37 +144,37 @@ export function WorkoutForm({ plan, workout }) {
   return (
     <div className="px-4 pt-4 pb-6">
       <WeekStrip date={date} plan={plan} logs={logs} onSelectDate={setDate} />
-      <p className="text-sm text-zinc-400 mt-3">{info.muscle || "Dia de descanso"}</p>
+      <p className="text-body-sm text-ink-secondary mt-3">{info.muscle || "Dia de descanso"}</p>
 
       {info.items.length === 0 ? (
         <div className="mt-16 text-center">
-          <p className="text-lg font-semibold text-zinc-300">Dia de descanso</p>
-          <p className="text-sm text-zinc-500 mt-1">Sem treino planejado para hoje. Aproveite para recuperar.</p>
+          <p className="text-title text-ink-secondary">Dia de descanso</p>
+          <p className="text-body-sm text-ink-tertiary mt-1">Sem treino planejado para hoje. Aproveite para recuperar.</p>
         </div>
       ) : (
         <div className="mt-4">
           <button
             onClick={() => setSetupOpen((v) => !v)}
-            className="w-full flex items-center justify-between surface-1 rounded-2xl px-4 py-3 mb-3 press"
+            className="w-full flex items-center justify-between bg-surface border border-line-subtle rounded-[var(--radius-lg)] px-4 py-3 mb-3 press"
           >
             <div className="text-left">
-              <p className="text-sm font-semibold text-zinc-200">Antes de começar</p>
-              <p className="text-xs text-zinc-500 mt-0.5">{caffeineSummary} · {cardioSummary}</p>
+              <p className="text-body-sm font-semibold text-ink-primary">Antes de começar</p>
+              <p className="text-caption text-ink-tertiary mt-0.5">{caffeineSummary} · {cardioSummary}</p>
             </div>
-            <Icon name="chevronRight" size={18} className={"text-zinc-500 transition-transform " + (setupOpen ? "rotate-90" : "")} />
+            <Icon name="chevronRight" size={18} className={"text-ink-tertiary transition-transform duration-standard " + (setupOpen ? "rotate-90" : "")} />
           </button>
 
           {setupOpen && (
-            <div className="surface-1 rounded-2xl p-4 mb-3 space-y-4 animate-fadeIn">
+            <div className="bg-surface border border-line-subtle rounded-[var(--radius-lg)] p-4 mb-3 space-y-4 animate-fadeIn">
               <div>
-                <p className="text-sm text-zinc-300 font-medium mb-2">Tomou cafeína antes do treino?</p>
+                <p className="text-body-sm text-ink-secondary font-medium mb-2">Tomou cafeína antes do treino?</p>
                 <div className="flex gap-2">
                   <ToggleBtn active={caffeine === true} onClick={() => setCaffeine(true)}>Sim</ToggleBtn>
                   <ToggleBtn active={caffeine === false} onClick={() => setCaffeine(false)}>Não</ToggleBtn>
                 </div>
               </div>
               <div>
-                <p className="text-sm text-zinc-300 font-medium mb-2">Fez cardio hoje?</p>
+                <p className="text-body-sm text-ink-secondary font-medium mb-2">Fez cardio hoje?</p>
                 <div className="flex gap-2">
                   <ToggleBtn active={cardio.did === true} onClick={() => setCardio((prev) => ({ ...prev, did: true }))}>Sim</ToggleBtn>
                   <ToggleBtn active={cardio.did === false} onClick={() => setCardio((prev) => ({ ...prev, did: false }))}>Não</ToggleBtn>
@@ -180,7 +191,8 @@ export function WorkoutForm({ plan, workout }) {
                       placeholder="minutos"
                       value={cardio.minutes}
                       onChange={(e) => setCardio((prev) => ({ ...prev, minutes: sanitizeMinutes(e.target.value) }))}
-                      className="w-full surface-2 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none"
+                      aria-label="Minutos de cardio"
+                      className="w-full bg-surface-2 rounded-[var(--radius-sm)] px-3 py-2 text-sm text-ink-primary outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-400"
                     />
                     <div className="flex gap-2">
                       {["leve", "moderada", "forte"].map((lvl) => (
@@ -196,10 +208,10 @@ export function WorkoutForm({ plan, workout }) {
           )}
 
           {previousSameDay && (
-            <button onClick={repeatPrevious} className="press w-full mb-3 surface-2 text-zinc-100 text-sm font-semibold py-3 rounded-2xl flex items-center justify-center gap-2">
-              <Icon name="clock" size={15} className="text-zinc-500" />
+            <button onClick={repeatPrevious} className="press w-full mb-3 bg-surface-2 text-ink-primary text-sm font-semibold py-3 rounded-[var(--radius-lg)] flex items-center justify-center gap-2">
+              <Icon name="clock" size={15} className="text-ink-tertiary" />
               Repetir último treino
-              <span className="text-zinc-500 font-normal">· {formatBR(previousSameDay)}</span>
+              <span className="text-ink-tertiary font-normal">· {formatBR(previousSameDay)}</span>
             </button>
           )}
 
@@ -213,44 +225,48 @@ export function WorkoutForm({ plan, workout }) {
             const complete = sets.length > 0 && doneCount === sets.length;
             const isFocus = item.id === focusId;
             const expanded = expandedOverrides[item.id] !== undefined ? expandedOverrides[item.id] : isFocus;
+            // Série atual em foco (§15) — a primeira ainda não concluída.
+            // Ganha destaque visual (números maiores, fundo levemente tingido);
+            // as demais recebem tratamento reduzido/compacto conforme o estado.
+            const currentSetIdx = sets.findIndex((s) => !isSetComplete(unilateral, s));
 
             if (!expanded) {
               return (
                 <button
                   key={item.id}
                   onClick={() => toggleExpanded(item.id, isFocus)}
-                  className="w-full flex items-center justify-between surface-1 rounded-2xl px-4 py-3 mb-2 press text-left"
+                  className="w-full flex items-center justify-between bg-surface border border-line-subtle rounded-[var(--radius-lg)] px-4 py-3 mb-2 press text-left"
                 >
                   <div className="flex items-center gap-3 min-w-0">
                     {complete ? (
-                      <Icon name="checkCircle" size={19} className="text-teal-400 shrink-0" />
+                      <Icon name="checkCircle" size={19} className="text-primary-400 shrink-0" />
                     ) : (
-                      <span className="w-[18px] h-[18px] rounded-full border-2 border-zinc-700 shrink-0" aria-hidden="true" />
+                      <span className="w-[18px] h-[18px] rounded-full border-2 border-line-strong shrink-0" aria-hidden="true" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-zinc-200 truncate">{ex.name}</p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-sm font-medium text-ink-primary truncate">{ex.name}</p>
+                      <p className="text-caption text-ink-tertiary">
                         {doneCount}/{sets.length} séries{exTonnage > 0 ? " · " + formatWeight(exTonnage) : ""}
                       </p>
                     </div>
                   </div>
-                  <Icon name="chevronRight" size={16} className="text-zinc-500 shrink-0" />
+                  <Icon name="chevronRight" size={16} className="text-ink-tertiary shrink-0" />
                 </button>
               );
             }
 
             return (
-              <div key={item.id} className="surface-1 rounded-2xl p-4 mb-2">
+              <div key={item.id} className="bg-surface border border-line-subtle rounded-[var(--radius-lg)] p-4 mb-2">
                 <div className="flex items-start justify-between gap-2">
                   <button onClick={() => toggleExpanded(item.id, isFocus)} className="text-left flex-1 min-w-0">
-                    <p className="font-semibold text-zinc-100">{ex.name}</p>
-                    <p className="text-xs text-zinc-500 mt-0.5">{ex.muscle} · meta {item.sets}×{item.reps}</p>
+                    <p className="text-[22px] font-bold leading-tight text-ink-primary">{ex.name}</p>
+                    <p className="text-[13px] font-semibold text-ink-tertiary mt-1">{ex.muscle} · meta {item.sets}×{item.reps}</p>
                   </button>
-                  {exTonnage > 0 && <p className="text-xs text-teal-400 font-medium shrink-0">{formatWeight(exTonnage)}</p>}
+                  {exTonnage > 0 && <p className="text-caption text-primary-400 font-medium shrink-0">{formatWeight(exTonnage)}</p>}
                 </div>
 
-                <div className="flex items-center justify-between gap-2 mt-3 surface-2 rounded-xl px-3 py-2.5">
-                  <span className="text-sm text-zinc-300">Unilateral (E/D)</span>
+                <div className="flex items-center justify-between gap-2 mt-3 bg-surface-2 rounded-[var(--radius-md)] px-3 py-2.5">
+                  <span className="text-sm text-ink-secondary">Unilateral (E/D)</span>
                   <Switch
                     checked={unilateral}
                     onChange={(next) => setExerciseUnilateral(item.id, next)}
@@ -259,72 +275,90 @@ export function WorkoutForm({ plan, workout }) {
                 </div>
 
                 {last ? (
-                  <div className="mt-2 surface-2 rounded-xl px-3 py-2.5">
+                  <div className="mt-2 bg-surface-2 rounded-[var(--radius-md)] px-3 py-2.5">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-xs text-zinc-400">
+                      <p className="text-[13px] text-ink-tertiary">
                         Último treino ({agoLabel(last.date, date)}) · máx {last.max} kg
                         {last.caffeine === true ? " · com cafeína" : ""}
                         {last.caffeine === false ? " · sem cafeína" : ""}
                       </p>
                       <button
                         onClick={() => handleRepeatExercise(item)}
-                        className="press shrink-0 flex items-center gap-1 bg-zinc-800 text-zinc-200 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg"
+                        className="press shrink-0 flex items-center gap-1 bg-surface-3 text-ink-secondary text-[11px] font-semibold px-2.5 py-1.5 rounded-[var(--radius-sm)]"
                       >
                         <Icon name="clock" size={12} />
                         Repetir último
                       </button>
                     </div>
                     {last.sets && last.sets.length > 0 && (
-                      <p className="text-xs text-zinc-500 mt-1">{last.sets.map((s) => formatSet(s)).join("   ")}</p>
+                      <p className="text-caption text-ink-tertiary mt-1">{last.sets.map((s) => formatSet(s)).join("   ")}</p>
                     )}
                     {last.baseline && (
-                      <p className="text-xs text-zinc-500 mt-1">Média (últimas {last.baseline.count}): {last.baseline.avgMax.toFixed(1)} kg</p>
+                      <p className="text-caption text-ink-tertiary mt-1">Média (últimas {last.baseline.count}): {last.baseline.avgMax.toFixed(1)} kg</p>
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 mt-2 surface-2 rounded-xl px-3 py-2.5 opacity-50">
-                    <button disabled aria-disabled="true" className="flex items-center gap-1 bg-zinc-800 text-zinc-400 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg">
+                  <div className="flex items-center gap-2 mt-2 bg-surface-2 rounded-[var(--radius-md)] px-3 py-2.5 opacity-50">
+                    <button disabled aria-disabled="true" className="flex items-center gap-1 bg-surface-3 text-ink-tertiary text-[11px] font-semibold px-2.5 py-1.5 rounded-[var(--radius-sm)]">
                       <Icon name="clock" size={12} />
                       Repetir último
                     </button>
-                    <p className="text-[11px] text-zinc-500">Primeiro treino detectado</p>
+                    <p className="text-[11px] text-ink-tertiary">Primeiro treino detectado</p>
                   </div>
                 )}
 
-                <div className="mt-3 space-y-1">
+                <div className="mt-3 space-y-1.5">
                   {sets.map((s, i) => {
                     const done = isSetComplete(unilateral, s);
                     const isAuto = autoFilled.has(item.id + ":" + i);
+                    const isCurrent = i === currentSetIdx;
+                    const stepperSize = isCurrent ? "large" : "default";
                     return (
-                      <div key={i} className={"rounded-xl px-1.5 py-1.5 " + (done ? "bg-teal-400/[0.06]" : "")}>
+                      <div
+                        key={i}
+                        className={
+                          "rounded-[var(--radius-md)] px-2 py-2.5 transition-opacity duration-standard " +
+                          (done ? "opacity-[0.62]" : isCurrent ? "bg-surface-selected" : "")
+                        }
+                      >
+                        {isCurrent ? (
+                          <p className="text-[12px] font-semibold uppercase text-primary-400 mb-2" style={{ letterSpacing: "0.04em" }}>
+                            Série {i + 1} de {sets.length}
+                          </p>
+                        ) : (
+                          <p className="text-caption text-ink-tertiary mb-1.5">Série {i + 1}</p>
+                        )}
+
                         {unilateral ? (
-                          <div className="flex items-center gap-1 w-full">
-                            <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
-                            <span className="text-[10px] text-zinc-500 shrink-0">E</span>
-                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
-                            <span className="text-[10px] text-zinc-500 shrink-0">D</span>
-                            <WeightInput value={s.weightD} onChange={(v) => handleSetChange(item, unilateral, i, "weightD", v)} />
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-ink-tertiary w-3 shrink-0">E</span>
+                              <WeightInput size={stepperSize} value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-ink-tertiary w-3 shrink-0">D</span>
+                              <WeightInput size={stepperSize} value={s.weightD} onChange={(v) => handleSetChange(item, unilateral, i, "weightD", v)} />
+                            </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1 w-full">
-                            <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
-                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
-                          </div>
+                          <WeightInput size={stepperSize} value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
                         )}
-                        <div className="flex items-center gap-1 w-full mt-1 pl-5">
-                          <RepsInput value={s.reps} onChange={(v) => handleSetChange(item, unilateral, i, "reps", v)} />
+
+                        <div className="mt-1.5">
+                          <RepsInput size={stepperSize} value={s.reps} onChange={(v) => handleSetChange(item, unilateral, i, "reps", v)} />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 mt-1.5">
                           {isAuto && (
-                            <span className="text-[9px] font-bold text-amber-400 bg-amber-400/10 rounded px-1 py-0.5 shrink-0" title="Preenchido automaticamente pelo 'Repetir último'">
+                            <Badge variant="neutral" className="!h-6" title="Preenchido automaticamente pelo 'Repetir último' — ajuste se precisar">
                               auto
-                            </span>
+                            </Badge>
                           )}
-                          {done ? (
+                          {done && (
                             <>
-                              <Icon name="checkCircle" size={16} className="text-teal-400 shrink-0" />
+                              <Icon name="checkCircle" size={16} className="text-primary-400 shrink-0" />
                               <span className="sr-only">Série completa</span>
                             </>
-                          ) : (
-                            <span className="w-4 shrink-0" aria-hidden="true" />
                           )}
                           <button
                             onClick={() => {
@@ -336,59 +370,59 @@ export function WorkoutForm({ plan, workout }) {
                                 return changed ? next : prev;
                               });
                             }}
-                            aria-label={`Remover série ${i + 1}`}
-                            className="ml-auto px-2 text-zinc-500 text-xs shrink-0"
+                            aria-label={`Remover série ${i + 1} de ${ex.name}`}
+                            className="press w-8 h-8 flex items-center justify-center text-ink-tertiary shrink-0"
                           >
-                            remover
+                            <Icon name="x" size={14} />
                           </button>
                         </div>
                       </div>
                     );
                   })}
-                  <button onClick={() => addSet(item.id)} className="text-xs text-zinc-400 press pl-1.5">+ adicionar série</button>
+                  <button onClick={() => addSet(item.id)} className="text-caption text-ink-tertiary press pl-1.5 py-1">+ adicionar série</button>
                 </div>
               </div>
             );
           })}
 
           {totalTonnage > 0 && (
-            <div className="surface-1 rounded-2xl p-4 mt-2 mb-3">
-              <p className="text-sm font-semibold text-zinc-100">Resumo do esforço</p>
-              <p className="text-xs text-zinc-500 mt-1">Volume total: {formatWeight(totalTonnage)}</p>
+            <div className="bg-surface border border-line-subtle rounded-[var(--radius-lg)] p-4 mt-2 mb-3">
+              <p className="text-sm font-semibold text-ink-primary">Resumo do esforço</p>
+              <p className="text-caption text-ink-tertiary mt-1">Volume total: {formatWeight(totalTonnage)}</p>
               <div className="mt-2 space-y-1">
                 {GROUP_ORDER.filter((g) => groupVolumesLive[g] > 0)
                   .sort((a, b) => groupVolumesLive[b] - groupVolumesLive[a])
                   .map((g) => (
                     <div key={g} className="flex justify-between text-xs">
-                      <span className="text-zinc-400">{g}</span>
-                      <span className="text-zinc-300 font-medium">{formatWeight(groupVolumesLive[g])}</span>
+                      <span className="text-ink-tertiary">{g}</span>
+                      <span className="text-ink-secondary font-medium">{formatWeight(groupVolumesLive[g])}</span>
                     </div>
                   ))}
               </div>
-              <div className="mt-3 pt-3 border-t divider space-y-1">
-                <div className="flex justify-between text-xs text-zinc-500">
+              <div className="mt-3 pt-3 border-t border-line-subtle space-y-1">
+                <div className="flex justify-between text-xs text-ink-tertiary">
                   <span>Musculação (~{Math.round(musculKcalInfo.durationMin)} min)</span>
                   <span>~{Math.round(musculKcalInfo.kcal)} kcal</span>
                 </div>
                 {cardio.did === true && (
-                  <div className="flex justify-between text-xs text-zinc-500">
+                  <div className="flex justify-between text-xs text-ink-tertiary">
                     <span>Cardio ({cardio.type}, {cardio.minutes || 0} min)</span>
                     <span>~{Math.round(cardioKcal)} kcal</span>
                   </div>
                 )}
-                <div className="flex justify-between text-sm text-rose-400 font-semibold pt-1">
+                <div className="flex justify-between text-sm text-primary-400 font-semibold pt-1">
                   <span>Total estimado</span>
                   <span>~{Math.round(totalKcal)} kcal</span>
                 </div>
               </div>
-              <p className="text-[11px] text-zinc-500 mt-2">Estimativa baseada no seu perfil e em valores médios de MET — o consumo real varia.</p>
+              <p className="text-[11px] text-ink-tertiary mt-2">Estimativa baseada no seu perfil e em valores médios de MET — o consumo real varia.</p>
             </div>
           )}
 
-          <button onClick={save} disabled={saving} className="press w-full bg-rose-500 text-white font-semibold py-3.5 rounded-2xl mt-2">
+          <Button onClick={handleSave} disabled={saving} size="large" className="w-full mt-2">
             {saving ? "Salvando…" : "Salvar treino do dia"}
-          </button>
-          {msg === "copiado" && <p className="text-center text-sm text-teal-400 mt-2">Preenchido com o último treino — ajuste e salve.</p>}
+          </Button>
+          {msg === "copiado" && <p className="text-center text-sm text-primary-400 mt-2">Preenchido com o último treino — ajuste e salve.</p>}
           {msg === "erro" && <p className="text-center text-sm text-rose-400 mt-2">Não foi possível salvar. Seus dados continuam preenchidos — tente novamente.</p>}
         </div>
       )}

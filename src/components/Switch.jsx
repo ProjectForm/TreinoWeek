@@ -3,22 +3,17 @@ import React from "react";
 // Switch estilo iOS. Estado é sempre controlado pelo pai — este componente
 // não guarda nada, então não há preferência persistida por trás dele.
 export function Switch({ checked, onChange, label }) {
-  function toggle() {
-    if (typeof navigator !== "undefined" && navigator.vibrate) {
-      try { navigator.vibrate(15); } catch (e) { /* haptics não suportado neste dispositivo */ }
-    }
-    onChange(!checked);
-  }
-
+  // Sem haptic aqui de propósito — reservado a conclusão de série/PR/treino/
+  // level up (§29 da Fase 2A-2); alternar um switch não entra nessa lista.
   return (
     <button
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      onClick={toggle}
+      onClick={() => onChange(!checked)}
       className={
-        "relative shrink-0 w-11 h-7 rounded-full transition-colors duration-200 " +
-        (checked ? "bg-rose-500" : "bg-zinc-700")
+        "relative shrink-0 w-11 h-7 rounded-full transition-colors duration-standard " +
+        (checked ? "bg-primary-600" : "bg-surface-3")
       }
     >
       <span

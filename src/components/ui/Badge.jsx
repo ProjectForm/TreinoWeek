@@ -9,10 +9,11 @@ const VARIANTS = {
 
 // §25 — badge de 28px de altura. Reservado pra informação que realmente
 // precisa de destaque (não usar pra tudo).
-export function Badge({ variant = "neutral", className = "", children }) {
+export function Badge({ variant = "neutral", className = "", children, ...rest }) {
   return (
     <span
       className={"inline-flex items-center h-7 px-2.5 rounded-[var(--radius-pill)] text-xs font-semibold " + VARIANTS[variant] + " " + className}
+      {...rest}
     >
       {children}
     </span>
