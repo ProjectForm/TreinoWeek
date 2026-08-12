@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
-import { DEFAULT_REST_SECONDS } from "../constants/config.js";
 import { DAYS } from "../constants/plan.js";
 import { formatBR, formatWeight, agoLabel, formatSet } from "../utils/formatters.js";
 import { tonnageOf, sanitizeMinutes } from "../utils/stats.js";
 import { WeightInput } from "./WeightInput.jsx";
 import { RepsInput } from "./RepsInput.jsx";
 import { WeekStrip } from "./WeekStrip.jsx";
-import { RestTimer } from "./RestTimer.jsx";
 import { Icon } from "./Icon.jsx";
 import { Switch } from "./Switch.jsx";
 import { Button } from "./ui/Button.jsx";
@@ -62,7 +60,6 @@ export function WorkoutForm({ plan, workout }) {
   const [expandedOverrides, setExpandedOverrides] = useState({});
   const [setupOpen, setSetupOpen] = useState(false);
   const [dayPickerOpen, setDayPickerOpen] = useState(false);
-  const [rest, setRest] = useState(null); // { total, secondsLeft }
   const [autoFilled, setAutoFilled] = useState(() => new Set());
 
   useEffect(() => {
@@ -84,19 +81,6 @@ export function WorkoutForm({ plan, workout }) {
     // "auto" bem no momento em que o usuário precisa revisar antes de confirmar.
     setExpandedOverrides((prev) => ({ ...prev, [item.id]: true }));
   }
-
-  useEffect(() => {
-    if (!rest) return;
-    if (rest.secondsLeft <= 0) {
-      if (typeof navigator !== "undefined" && navigator.vibrate) {
-        try { navigator.vibrate(200); } catch (e) { /* haptics não suportado neste dispositivo */ }
-      }
-      setRest(null);
-      return;
-    }
-    const t = setTimeout(() => setRest((r) => r && { ...r, secondsLeft: r.secondsLeft - 1 }), 1000);
-    return () => clearTimeout(t);
-  }, [rest]);
 
   function handleSetChange(item, unilateral, idx, field, value) {
     const before = (entries[item.id] || [])[idx] || {};
@@ -120,7 +104,6 @@ export function WorkoutForm({ plan, workout }) {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
         try { navigator.vibrate(25); } catch (e) { /* haptics não suportado neste dispositivo */ }
       }
-      setRest({ total: DEFAULT_REST_SECONDS, secondsLeft: DEFAULT_REST_SECONDS });
     }
   }
 
@@ -351,7 +334,7 @@ export function WorkoutForm({ plan, workout }) {
                   </div>
                 )}
 
-                <div className="mt-3 space-y-1.5">
+                <div className="mt-3 space-y-1">
                   {sets.map((s, i) => {
                     const done = isSetComplete(unilateral, s);
                     const isAuto = autoFilled.has(item.id + ":" + i);
@@ -361,25 +344,25 @@ export function WorkoutForm({ plan, workout }) {
                       <div
                         key={i}
                         className={
-                          "rounded-[var(--radius-md)] px-2 py-2.5 transition-opacity duration-standard " +
+                          "rounded-[var(--radius-md)] px-2 py-2 transition-opacity duration-standard " +
                           (done ? "opacity-[0.62]" : isCurrent ? "bg-surface-selected" : "")
                         }
                       >
                         {isCurrent ? (
-                          <p className="text-[12px] font-semibold uppercase text-primary-400 mb-2" style={{ letterSpacing: "0.04em" }}>
+                          <p className="text-[11px] font-semibold uppercase text-primary-400 mb-1.5" style={{ letterSpacing: "0.04em" }}>
                             Série {i + 1} de {sets.length}
                           </p>
                         ) : (
-                          <p className="text-caption text-ink-tertiary mb-1.5">Série {i + 1}</p>
+                          <p className="text-caption text-ink-tertiary mb-1">Série {i + 1}</p>
                         )}
 
                         {unilateral ? (
-                          <div className="space-y-1.5">
-                            <div className="flex items-center gap-2">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-[10px] text-ink-tertiary w-3 shrink-0">E</span>
                               <WeightInput size={stepperSize} value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <span className="text-[10px] text-ink-tertiary w-3 shrink-0">D</span>
                               <WeightInput size={stepperSize} value={s.weightD} onChange={(v) => handleSetChange(item, unilateral, i, "weightD", v)} />
                             </div>
@@ -388,11 +371,11 @@ export function WorkoutForm({ plan, workout }) {
                           <WeightInput size={stepperSize} value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
                         )}
 
-                        <div className="mt-1.5">
+                        <div className="mt-1">
                           <RepsInput size={stepperSize} value={s.reps} onChange={(v) => handleSetChange(item, unilateral, i, "reps", v)} />
                         </div>
 
-                        <div className="flex items-center justify-end gap-2 mt-1.5">
+                        <div className="flex items-center justify-end gap-2 mt-1">
                           {isAuto && (
                             <Badge variant="neutral" className="!h-6" title="Preenchido automaticamente pelo 'Repetir último' — ajuste se precisar">
                               auto
@@ -470,13 +453,6 @@ export function WorkoutForm({ plan, workout }) {
           {msg === "erro" && <p className="text-center text-sm text-rose-400 mt-2">Não foi possível salvar. Seus dados continuam preenchidos — tente novamente.</p>}
         </div>
       )}
-
-      <RestTimer
-        secondsLeft={rest ? rest.secondsLeft : null}
-        totalSeconds={rest ? rest.total : null}
-        onSkip={() => setRest(null)}
-        onAdjust={(d) => setRest((r) => r && { ...r, secondsLeft: Math.max(0, r.secondsLeft + d), total: Math.max(r.total, r.secondsLeft + d) })}
-      />
     </div>
   );
 }
