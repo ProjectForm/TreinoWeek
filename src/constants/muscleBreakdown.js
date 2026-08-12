@@ -39,3 +39,20 @@ export const MUSCLE_TO_GROUP = {
 };
 
 export const GROUP_ORDER = ["Braços", "Peitoral", "Costas", "Pernas", "Core", "Ombros"];
+
+// Mapa reverso (grupo -> sub-músculos), derivado do próprio MUSCLE_TO_GROUP —
+// não é uma estrutura nova, só uma outra visão dos mesmos dados. Só inclui
+// músculos que realmente aparecem em algum exercício (DEFAULT_MUSCLE_BREAKDOWN),
+// pra não listar sub-grupos vazios que nenhum exercício do plano trabalha.
+const USED_MUSCLES = new Set();
+Object.values(DEFAULT_MUSCLE_BREAKDOWN).forEach((breakdown) => {
+  breakdown.forEach(({ m }) => USED_MUSCLES.add(m));
+});
+
+export const GROUP_TO_MUSCLES = {};
+GROUP_ORDER.forEach((g) => (GROUP_TO_MUSCLES[g] = []));
+Object.entries(MUSCLE_TO_GROUP).forEach(([muscle, group]) => {
+  if (group && GROUP_TO_MUSCLES[group] && USED_MUSCLES.has(muscle)) {
+    GROUP_TO_MUSCLES[group].push(muscle);
+  }
+});

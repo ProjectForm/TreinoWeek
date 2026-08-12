@@ -1,8 +1,9 @@
 import { RPG_CONFIG, RANKS } from "../constants/config.js";
-import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
+import { GROUP_ORDER, GROUP_TO_MUSCLES, DEFAULT_MUSCLE_BREAKDOWN } from "../constants/muscleBreakdown.js";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { ACHIEVEMENT_DEFS, TITULO_DEFS } from "../constants/achievements.js";
 import { tonnageOf, effectiveWeight } from "./stats.js";
+import { computeMuscleVolumes } from "./muscles.js";
 import { getWeekKey } from "./dates.js";
 
 export function buildCumulative(base, exp, maxN) {
@@ -165,6 +166,7 @@ export function computePlayerStateEngine(logs, weeks) {
   const historicoPorExercicio = {};
   const atributosXP = { forca: 0, condicionamento: 0, disciplina: 0, consistencia: 0 };
   const musculosXP = {}; GROUP_ORDER.forEach((g) => (musculosXP[g] = 0));
+  const musculosSubXP = {};
   const weekGroupSessionCount = {};
   const historicoAscensoes = [];
   const narrativesByDate = {};
@@ -242,6 +244,12 @@ export function computePlayerStateEngine(logs, weeks) {
 
     const gv = data.groupVolumes || {};
     const totalGV = Object.values(gv).reduce((a, b) => a + b, 0);
+    // Volume por sub-músculo (ex.: "Tríceps", "Bíceps") recomputado a partir
+    // das séries brutas já salvas — não depende de nenhum campo novo no
+    // payload salvo, só de data.exercises, que já existe desde sempre.
+    const entriesFlat = {};
+    exIds.forEach((id) => { entriesFlat[id] = data.exercises[id].sets || []; });
+    const muscleVol = computeMuscleVolumes(entriesFlat, DEFAULT_MUSCLE_BREAKDOWN);
     if (totalGV > 0) {
       GROUP_ORDER.forEach((g) => {
         const share = (gv[g] || 0) / totalGV;
@@ -250,6 +258,20 @@ export function computePlayerStateEngine(logs, weeks) {
         if (sessoesAntes >= 2) xpG *= RPG_CONFIG.MUSCULO_FATOR_REDUCAO_3X;
         musculosXP[g] += xpG * ascensaoBonusMult();
         if (xpG > 0) weekGroupSessionCount[wk][g] = sessoesAntes + 1;
+
+        // Divide o MESMO xpG entre os sub-músculos do grupo, proporcional ao
+        // volume de cada um nessa sessão — não cria XP nova, só detalha a
+        // origem dela, então o total do grupo continua idêntico a antes.
+        if (xpG > 0) {
+          const subMuscles = GROUP_TO_MUSCLES[g] || [];
+          const subVolTotal = subMuscles.reduce((a, m) => a + (muscleVol[m] || 0), 0);
+          if (subVolTotal > 0) {
+            subMuscles.forEach((m) => {
+              const subShare = (muscleVol[m] || 0) / subVolTotal;
+              musculosSubXP[m] = (musculosSubXP[m] || 0) + xpG * subShare * ascensaoBonusMult();
+            });
+          }
+        }
       });
     }
 
@@ -297,13 +319,18 @@ export function computePlayerStateEngine(logs, weeks) {
     const p = xpProgress(musculosXP[g], ATTR_CUM);
     musculosFinal[g] = { nivel: p.nivel, xp: Math.round(musculosXP[g]) };
   });
+  const subMusculosFinal = {};
+  Object.keys(musculosSubXP).forEach((m) => {
+    const p = xpProgress(musculosSubXP[m], ATTR_CUM);
+    subMusculosFinal[m] = { nivel: p.nivel, xp: Math.round(musculosSubXP[m]) };
+  });
 
   const baseResult = {
     patente: rankForAscensao(ascensaoCount), nivel: nivelProg.nivel, xp: nivelProg.xpAtual, xpNecessario: nivelProg.xpNecessario,
     ascensaoCount, streakAtual: streakState.streakAtual, streakMaxima: streakState.streakMaxima,
     escudos: streakState.escudos, escudosConquistadosTotal: streakState.escudosConquistadosTotal,
     semanasPerfeitasTotal: streakState.semanasPerfeitasTotal,
-    atributos: atributosFinal, musculos: musculosFinal, historicoAscensoes,
+    atributos: atributosFinal, musculos: musculosFinal, subMusculos: subMusculosFinal, historicoAscensoes,
     narrativesByDate, flagsByDate, totalTreinosCompletos, totalPRs, maxCargaGeral,
     volumeRecordeSessao, volumeVidaToda, teveRessurgimento, lastWeekXPBreakdown,
   };

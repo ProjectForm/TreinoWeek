@@ -15,6 +15,7 @@ import { LevelUpPopup } from "./components/LevelUpPopup.jsx";
 
 export default function App() {
   const [view, setView] = useState("dashboard");
+  const [presetExercise, setPresetExercise] = useState(null);
 
   const { plan, planReady } = usePlan();
   const workout = useWorkoutData(plan, planReady);
@@ -77,13 +78,25 @@ export default function App() {
           exerciseHistory={workout.exerciseHistory}
           engineResult={gamification.engineResult}
           onStartWorkout={() => setView("treino")}
+          presetExercise={presetExercise}
+          onPresetConsumed={() => setPresetExercise(null)}
         />
       )}
       {view === "historico" && (
         <HistoryView plan={plan} allSessions={workout.allSessions} onStartWorkout={() => setView("treino")} />
       )}
       {view === "personagem" && (
-        <CharacterView plan={plan} logs={workout.logs} weeks={workout.weeks} date={workout.date} gamification={gamification} />
+        <CharacterView
+          plan={plan}
+          logs={workout.logs}
+          weeks={workout.weeks}
+          date={workout.date}
+          gamification={gamification}
+          onNavigateToExercise={(exId) => {
+            setPresetExercise(exId);
+            setView("progresso");
+          }}
+        />
       )}
       {view === "perfil" && <ProfileView workout={workout} />}
     </div>

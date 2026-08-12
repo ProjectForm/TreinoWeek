@@ -197,12 +197,19 @@ export function useWorkoutData(plan, planReady) {
     items.forEach((item) => {
       const prev = saved && saved.exercises && saved.exercises[item.id];
       if (prev && prev.sets && prev.sets.length) {
+        // A forma salva (E/D ou peso único) manda — não o flag estático do
+        // plano — porque o unilateral agora é uma escolha por sessão, não
+        // uma configuração fixa do exercício.
+        const wasUnilateral = prev.sets[0].weightD !== undefined;
         next[item.id] = prev.sets.map((s) =>
-          item.unilateral
+          wasUnilateral
             ? { weight: s.weight || "", weightD: s.weightD || "", reps: s.reps || "" }
             : { weight: s.weight || "", reps: s.reps || "" }
         );
       } else {
+        // Dia novo, sem dado salvo: começa sempre no modo padrão (peso
+        // único), a menos que o plano já configure o exercício como
+        // unilateral por padrão (ex.: rosca concentrada).
         next[item.id] = [];
         for (let i = 0; i < item.sets; i++) {
           next[item.id].push(item.unilateral ? { weight: "", weightD: "", reps: item.reps } : { weight: "", reps: item.reps });
@@ -225,9 +232,11 @@ export function useWorkoutData(plan, planReady) {
     setEntries((prev) => {
       const list = prev[exId] ? prev[exId].slice() : [];
       const last = list[list.length - 1];
-      const item = ((plan[day] && plan[day].items) || []).find((it) => it.id === exId);
+      const isUnilateral = last
+        ? last.weightD !== undefined
+        : !!((plan[day] && plan[day].items) || []).find((it) => it.id === exId)?.unilateral;
       list.push(
-        item && item.unilateral
+        isUnilateral
           ? { weight: "", weightD: "", reps: last ? last.reps : "" }
           : { weight: "", reps: last ? last.reps : "" }
       );
@@ -242,17 +251,32 @@ export function useWorkoutData(plan, planReady) {
       return { ...prev, [exId]: list };
     });
   }
+  // Alterna o modo unilateral do exercício NESTA sessão — puramente estado
+  // local em memória (entries), nunca persistido como preferência. Reshapea
+  // as séries já preenchidas preservando o que der pra preservar.
+  function setExerciseUnilateral(exId, unilateral) {
+    setEntries((prev) => {
+      const list = prev[exId] || [];
+      const next = list.map((s) =>
+        unilateral
+          ? { weight: s.weight || "", weightD: s.weightD || "", reps: s.reps || "" }
+          : { weight: s.weight || "", reps: s.reps || "" }
+      );
+      return { ...prev, [exId]: next };
+    });
+  }
   // Repete só um exercício, usando a última vez que ele foi feito (qualquer
   // dia, via lastByExercise) — diferente de repeatPrevious, que repete o
-  // treino inteiro do mesmo dia da semana.
+  // treino inteiro do mesmo dia da semana. Adota a forma (E/D ou única) de
+  // como foi salvo da última vez.
   function repeatExercise(exId) {
     const hist = lastByExercise[exId];
     if (!hist || !hist.sets || !hist.sets.length) return false;
-    const item = ((plan[day] && plan[day].items) || []).find((it) => it.id === exId);
+    const wasUnilateral = hist.sets[0].weightD !== undefined;
     setEntries((prev) => ({
       ...prev,
       [exId]: hist.sets.map((s) =>
-        item && item.unilateral
+        wasUnilateral
           ? { weight: s.weight || "", weightD: s.weightD || "", reps: s.reps || "" }
           : { weight: s.weight || "", reps: s.reps || "" }
       ),
@@ -268,8 +292,9 @@ export function useWorkoutData(plan, planReady) {
     items.forEach((item) => {
       const prev = src.exercises && src.exercises[item.id];
       if (prev && prev.sets && prev.sets.length) {
+        const wasUnilateral = prev.sets[0].weightD !== undefined;
         next[item.id] = prev.sets.map((s) =>
-          item.unilateral
+          wasUnilateral
             ? { weight: s.weight || "", weightD: s.weightD || "", reps: s.reps || "" }
             : { weight: s.weight || "", reps: s.reps || "" }
         );
@@ -454,7 +479,7 @@ export function useWorkoutData(plan, planReady) {
     logs, weeks, exerciseHistory, lastWorkoutByExercise, userCreatedAt,
     bodyStats, setBodyStats, saveProfile, profileMsg,
     entries, caffeine, setCaffeine, cardio, setCardio,
-    updateSet, addSet, removeSet, repeatPrevious, repeatExercise, previousSameDay, lastByExercise,
+    updateSet, addSet, removeSet, setExerciseUnilateral, repeatPrevious, repeatExercise, previousSameDay, lastByExercise,
     groupVolumesLive, totalTonnage, musculKcalInfo, cardioKcal, totalKcal,
     ready, saving, msg, save,
     showSummary, setShowSummary, summaryData,

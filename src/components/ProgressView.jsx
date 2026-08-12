@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { formatBR, formatShort, formatWeight, formatSet } from "../utils/formatters.js";
 import { effectiveWeight } from "../utils/stats.js";
@@ -25,11 +25,20 @@ function EmptyState({ title, subtitle, onStartWorkout }) {
   );
 }
 
-export function ProgressView({ logs, exerciseHistory, engineResult, onStartWorkout }) {
+export function ProgressView({ logs, exerciseHistory, engineResult, onStartWorkout, presetExercise, onPresetConsumed }) {
   const [metric, setMetric] = useState("volume");
   const [showExercicio, setShowExercicio] = useState(false);
   const [chartEx, setChartEx] = useState("supino_maquina");
   const [exMetric, setExMetric] = useState("max");
+
+  // Chegada vinda do painel de sub-músculos (Personagem): abre direto na
+  // seção de exercício específico já com o exercício escolhido.
+  useEffect(() => {
+    if (!presetExercise) return;
+    setChartEx(presetExercise);
+    setShowExercicio(true);
+    if (onPresetConsumed) onPresetConsumed();
+  }, [presetExercise]);
 
   const dailyProgress = useMemo(() => {
     return Object.keys(logs)

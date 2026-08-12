@@ -1,13 +1,14 @@
-import React from "react";
-import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
+import React, { useState } from "react";
 import { ACHIEVEMENT_DEFS, TITULO_DEFS } from "../constants/achievements.js";
 import { MinimalAvatar } from "./MinimalAvatar.jsx";
 import { AttributeTree } from "./AttributeTree.jsx";
+import { MuscleAccordion } from "./MuscleAccordion.jsx";
+import { MuscleExercisesModal } from "./MuscleExercisesModal.jsx";
 import { Icon } from "./Icon.jsx";
 
-export function CharacterView({ plan, logs, weeks, date, gamification }) {
+export function CharacterView({ plan, logs, weeks, date, gamification, onNavigateToExercise }) {
   const { engineResult, tituloAtivo, pickTitulo } = gamification;
-  const treinados = Object.values(engineResult.musculos).filter((v) => v.xp > 0).length;
+  const [selectedMuscle, setSelectedMuscle] = useState(null);
 
   return (
     <div className="px-4 pt-4 pb-4 space-y-3">
@@ -58,28 +59,23 @@ export function CharacterView({ plan, logs, weeks, date, gamification }) {
         <AttributeTree atributos={engineResult.atributos} />
       </div>
 
-      {/* Nível 2 — grupos musculares + desafio de equilíbrio agrupados */}
-      <div className="surface-1 rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-[11px] text-zinc-500 uppercase tracking-wide font-medium">Grupos musculares</p>
-          {engineResult.bonusEquilibrioAtivo && <p className="text-[11px] text-teal-400 font-medium">+10% equilíbrio</p>}
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {GROUP_ORDER.map((k) => (
-            <div key={k} className="surface-2 rounded-xl p-2 text-center">
-              <p className="text-[11px] text-zinc-500 truncate">{k}</p>
-              <p className="text-sm font-bold text-zinc-100">Nv. {engineResult.musculos[k].nivel}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-4 pt-3 border-t divider">
-          <p className="text-xs text-zinc-400">Treine os 6 grupos ao menos uma vez</p>
-          <div className="w-full bg-zinc-800/80 rounded-full h-1.5 mt-2">
-            <div className="bg-amber-400 h-1.5 rounded-full" style={{ width: (treinados / GROUP_ORDER.length) * 100 + "%" }} />
-          </div>
-          <p className="text-[11px] text-zinc-500 mt-1">{treinados}/{GROUP_ORDER.length} grupos com XP</p>
-        </div>
-      </div>
+      {/* Nível 2 — grupos musculares em accordion, com sub-músculos */}
+      <MuscleAccordion
+        musculos={engineResult.musculos}
+        subMusculos={engineResult.subMusculos}
+        logs={logs}
+        bonusEquilibrioAtivo={engineResult.bonusEquilibrioAtivo}
+        onSelectMuscle={setSelectedMuscle}
+      />
+
+      <MuscleExercisesModal
+        muscle={selectedMuscle}
+        onClose={() => setSelectedMuscle(null)}
+        onSelectExercise={(exId) => {
+          setSelectedMuscle(null);
+          if (onNavigateToExercise) onNavigateToExercise(exId);
+        }}
+      />
 
       {/* Nível 2 — conquistas, uma superfície com linhas em vez de card-por-item */}
       <div className="surface-1 rounded-2xl overflow-hidden">

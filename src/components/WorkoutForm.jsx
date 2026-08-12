@@ -9,13 +9,23 @@ import { RepsInput } from "./RepsInput.jsx";
 import { WeekStrip } from "./WeekStrip.jsx";
 import { RestTimer } from "./RestTimer.jsx";
 import { Icon } from "./Icon.jsx";
+import { Switch } from "./Switch.jsx";
 
-function isSetComplete(item, s) {
+// Unilateral agora é uma escolha por sessão (guardada no formato do próprio
+// set — weightD presente ou não), então essas funções recebem um boolean já
+// resolvido em vez de olhar item.unilateral (que só serve como sugestão
+// inicial do plano).
+function isSetComplete(unilateral, s) {
   if (!s) return false;
   const w = parseFloat(s.weight) > 0;
   const r = parseFloat(s.reps) > 0;
-  if (!item.unilateral) return w && r;
+  if (!unilateral) return w && r;
   return w && parseFloat(s.weightD) > 0 && r;
+}
+
+function isUnilateralNow(item, sets) {
+  if (sets && sets.length > 0) return sets[0].weightD !== undefined;
+  return !!item.unilateral;
 }
 
 function ToggleBtn({ active, onClick, children, className = "" }) {
@@ -37,7 +47,7 @@ export function WorkoutForm({ plan, workout }) {
   const {
     date, setDate, day, logs,
     entries, caffeine, setCaffeine, cardio, setCardio,
-    updateSet, addSet, removeSet, repeatPrevious, repeatExercise, previousSameDay, lastByExercise,
+    updateSet, addSet, removeSet, setExerciseUnilateral, repeatPrevious, repeatExercise, previousSameDay, lastByExercise,
     groupVolumesLive, totalTonnage, musculKcalInfo, cardioKcal, totalKcal,
     saving, msg, save,
   } = workout;
@@ -82,11 +92,11 @@ export function WorkoutForm({ plan, workout }) {
     return () => clearTimeout(t);
   }, [rest]);
 
-  function handleSetChange(item, idx, field, value) {
+  function handleSetChange(item, unilateral, idx, field, value) {
     const before = (entries[item.id] || [])[idx] || {};
     const after = { ...before, [field]: value };
-    const wasComplete = isSetComplete(item, before);
-    const nowComplete = isSetComplete(item, after);
+    const wasComplete = isSetComplete(unilateral, before);
+    const nowComplete = isSetComplete(unilateral, after);
     updateSet(item.id, idx, field, value);
 
     const autoKey = item.id + ":" + idx;
@@ -112,7 +122,8 @@ export function WorkoutForm({ plan, workout }) {
 
   const focusItem = info.items.find((item) => {
     const sets = entries[item.id] || [];
-    return !(sets.length > 0 && sets.every((s) => isSetComplete(item, s)));
+    const unilateral = isUnilateralNow(item, sets);
+    return !(sets.length > 0 && sets.every((s) => isSetComplete(unilateral, s)));
   });
   const focusId = focusItem ? focusItem.id : null;
 
@@ -195,9 +206,10 @@ export function WorkoutForm({ plan, workout }) {
           {info.items.map((item) => {
             const ex = DEFAULT_EXERCISES[item.id];
             const sets = entries[item.id] || [];
+            const unilateral = isUnilateralNow(item, sets);
             const last = lastByExercise[item.id];
             const exTonnage = tonnageOf(sets);
-            const doneCount = sets.filter((s) => isSetComplete(item, s)).length;
+            const doneCount = sets.filter((s) => isSetComplete(unilateral, s)).length;
             const complete = sets.length > 0 && doneCount === sets.length;
             const isFocus = item.id === focusId;
             const expanded = expandedOverrides[item.id] !== undefined ? expandedOverrides[item.id] : isFocus;
@@ -237,8 +249,17 @@ export function WorkoutForm({ plan, workout }) {
                   {exTonnage > 0 && <p className="text-xs text-teal-400 font-medium shrink-0">{formatWeight(exTonnage)}</p>}
                 </div>
 
+                <div className="flex items-center justify-between gap-2 mt-3 surface-2 rounded-xl px-3 py-2.5">
+                  <span className="text-sm text-zinc-300">Unilateral (E/D)</span>
+                  <Switch
+                    checked={unilateral}
+                    onChange={(next) => setExerciseUnilateral(item.id, next)}
+                    label={`Registrar ${ex.name} como unilateral, com peso esquerdo e direito separados`}
+                  />
+                </div>
+
                 {last ? (
-                  <div className="mt-3 surface-2 rounded-xl px-3 py-2.5">
+                  <div className="mt-2 surface-2 rounded-xl px-3 py-2.5">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-xs text-zinc-400">
                         Último treino ({agoLabel(last.date, date)}) · máx {last.max} kg
@@ -261,33 +282,37 @@ export function WorkoutForm({ plan, workout }) {
                     )}
                   </div>
                 ) : (
-                  <p className="text-[11px] text-zinc-600 mt-3" aria-disabled="true" title="Ainda não há um treino anterior deste exercício para repetir">
-                    Primeiro treino detectado — sem histórico pra repetir ainda.
-                  </p>
+                  <div className="flex items-center gap-2 mt-2 surface-2 rounded-xl px-3 py-2.5 opacity-50">
+                    <button disabled aria-disabled="true" className="flex items-center gap-1 bg-zinc-800 text-zinc-400 text-[11px] font-semibold px-2.5 py-1.5 rounded-lg">
+                      <Icon name="clock" size={12} />
+                      Repetir último
+                    </button>
+                    <p className="text-[11px] text-zinc-500">Primeiro treino detectado</p>
+                  </div>
                 )}
 
                 <div className="mt-3 space-y-1">
                   {sets.map((s, i) => {
-                    const done = isSetComplete(item, s);
+                    const done = isSetComplete(unilateral, s);
                     const isAuto = autoFilled.has(item.id + ":" + i);
                     return (
                       <div key={i} className={"rounded-xl px-1.5 py-1.5 " + (done ? "bg-teal-400/[0.06]" : "")}>
-                        {item.unilateral ? (
+                        {unilateral ? (
                           <div className="flex items-center gap-1 w-full">
                             <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
                             <span className="text-[10px] text-zinc-500 shrink-0">E</span>
-                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, i, "weight", v)} />
+                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
                             <span className="text-[10px] text-zinc-500 shrink-0">D</span>
-                            <WeightInput value={s.weightD} onChange={(v) => handleSetChange(item, i, "weightD", v)} />
+                            <WeightInput value={s.weightD} onChange={(v) => handleSetChange(item, unilateral, i, "weightD", v)} />
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 w-full">
                             <span className="text-xs text-zinc-500 w-4 shrink-0">{i + 1}</span>
-                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, i, "weight", v)} />
+                            <WeightInput value={s.weight} onChange={(v) => handleSetChange(item, unilateral, i, "weight", v)} />
                           </div>
                         )}
                         <div className="flex items-center gap-1 w-full mt-1 pl-5">
-                          <RepsInput value={s.reps} onChange={(v) => handleSetChange(item, i, "reps", v)} />
+                          <RepsInput value={s.reps} onChange={(v) => handleSetChange(item, unilateral, i, "reps", v)} />
                           {isAuto && (
                             <span className="text-[9px] font-bold text-amber-400 bg-amber-400/10 rounded px-1 py-0.5 shrink-0" title="Preenchido automaticamente pelo 'Repetir último'">
                               auto
