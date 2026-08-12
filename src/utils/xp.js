@@ -2,7 +2,7 @@ import { RPG_CONFIG, RANKS } from "../constants/config.js";
 import { GROUP_ORDER, GROUP_TO_MUSCLES, DEFAULT_MUSCLE_BREAKDOWN } from "../constants/muscleBreakdown.js";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { ACHIEVEMENT_DEFS, TITULO_DEFS } from "../constants/achievements.js";
-import { tonnageOf, effectiveWeight } from "./stats.js";
+import { tonnageOf, effectiveWeight, maxSideWeight } from "./stats.js";
 import { computeMuscleVolumes } from "./muscles.js";
 import { getWeekKey } from "./dates.js";
 
@@ -99,14 +99,24 @@ export function fatorVolumeRpg(seriesTotais) {
   return f;
 }
 
+// `sets` é uma lista de { exId, weight, reps, loadWeight? }. `weight` é o
+// peso de VOLUME (E+D somado pra unilaterais) — usado na soma de tonelagem.
+// `loadWeight` é o peso de CARGA (máximo de um lado, pra unilaterais) —
+// usado só pra comparar contra o PR (`recordesPR`, que também é carga, não
+// volume). Comparar volume contra um PR de carga faria o percentual passar
+// de 100% quase sempre em exercícios unilaterais, desligando na prática o
+// fator de "carga muito abaixo do PR" pra esses exercícios — por isso as
+// duas unidades são mantidas separadas aqui. `loadWeight` cai de volta pra
+// `weight` se não for informado (compatibilidade com quem chama sem ele).
 export function computePerformanceXPRpg(sets, recordesPR, kcalTreino) {
   let volumeTotalTreino = 0;
   sets.forEach((s) => {
     const repsContadas = Math.min(s.reps, RPG_CONFIG.REPS_LIMITE_POR_SERIE);
     const pr = recordesPR[s.exId] || 0;
+    const loadWeight = s.loadWeight != null ? s.loadWeight : s.weight;
     let fator = 1.0;
     if (pr > 0) {
-      const pct = s.weight / pr;
+      const pct = loadWeight / pr;
       if (pct < RPG_CONFIG.CARGA_MINIMA_PCT_30) fator = RPG_CONFIG.CARGA_MINIMA_XP_30;
       else if (pct < RPG_CONFIG.CARGA_MINIMA_PCT_50) fator = RPG_CONFIG.CARGA_MINIMA_XP_50;
     }
@@ -223,16 +233,19 @@ export function computePlayerStateEngine(logs, weeks) {
     const sets = [];
     exIds.forEach((id) => (data.exercises[id].sets || []).forEach((s) => {
       const w = effectiveWeight(s), rp = parseFloat(s.reps) || 0;
-      if (w > 0) sets.push({ exId: id, weight: w, reps: rp });
+      if (w > 0) sets.push({ exId: id, weight: w, loadWeight: maxSideWeight(s), reps: rp });
     }));
     totalTreinosCompletos++;
 
     const kcalTreino = data.kcal || 0;
     const perf = computePerformanceXPRpg(sets, recordesPR, kcalTreino);
     const cal = computeCaloriasXPRpg(kcalTreino);
+    // cargaAtualPorExercicio é CARGA (max de um lado), não volume — é o que
+    // vira PR/recorde/"carga máxima" em todo o resto do engine. Uma série
+    // unilateral de 10kg E + 10kg D é carga de 10kg por lado, não 20kg.
     const cargaAtualPorExercicio = {};
     exIds.forEach((id) => {
-      cargaAtualPorExercicio[id] = Math.max.apply(null, (data.exercises[id].sets || []).map((s) => effectiveWeight(s)));
+      cargaAtualPorExercicio[id] = Math.max.apply(null, (data.exercises[id].sets || []).map((s) => maxSideWeight(s)));
     });
     const evo = computeEvolucaoXPRpg(exIds, cargaAtualPorExercicio, historicoPorExercicio);
 

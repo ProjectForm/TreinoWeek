@@ -4,7 +4,12 @@ export function AscensaoModal({ historico, onContinue }) {
   const ultima = historico[historico.length - 1];
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950/90 backdrop-blur-sm flex items-center justify-center p-6 animate-fadeIn">
-      <div className="surface-1 shadow-soft border border-amber-500/25 rounded-2xl p-6 w-full max-w-xs text-center animate-scaleIn">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={"Ascensão: " + ultima.de + " para " + ultima.para}
+        className="surface-1 shadow-soft border border-amber-500/25 rounded-2xl p-6 w-full max-w-xs text-center animate-scaleIn"
+      >
         <p className="text-[11px] text-amber-400 uppercase tracking-widest font-medium">Ascensão</p>
         <p className="text-2xl font-bold text-zinc-100 mt-2">{ultima.de}</p>
         <p className="text-rose-400 text-2xl my-1">↓</p>

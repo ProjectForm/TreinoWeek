@@ -14,7 +14,7 @@ export function usePlan() {
       if (planRaw) {
         try {
           loadedPlan = JSON.parse(planRaw);
-        } catch (e) {}
+        } catch (e) { /* plano corrompido: segue com o plano padrão */ }
       } else {
         await sSet("plan", JSON.stringify(DEFAULT_PLAN));
       }

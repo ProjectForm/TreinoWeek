@@ -17,6 +17,9 @@ export function MuscleExercisesModal({ muscle, onClose, onSelectExercise }) {
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950/80 backdrop-blur-sm flex items-end animate-fadeIn" onClick={onClose}>
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={"Exercícios para " + muscle}
         className="surface-1 shadow-soft rounded-t-3xl p-5 w-full max-h-[75vh] overflow-y-auto animate-scaleIn"
         onClick={(e) => e.stopPropagation()}
       >

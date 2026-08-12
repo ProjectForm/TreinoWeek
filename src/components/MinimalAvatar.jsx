@@ -48,7 +48,7 @@ export function MinimalAvatar({ nivel, atributos }) {
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="0 0 120 172" className="w-28 h-40">
+      <svg viewBox="0 0 120 172" className="w-28 h-40" aria-hidden="true">
         <defs>
           <linearGradient id={gradId} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor={light} />

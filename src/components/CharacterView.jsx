@@ -6,7 +6,7 @@ import { MuscleAccordion } from "./MuscleAccordion.jsx";
 import { MuscleExercisesModal } from "./MuscleExercisesModal.jsx";
 import { Icon } from "./Icon.jsx";
 
-export function CharacterView({ plan, logs, weeks, date, gamification, onNavigateToExercise }) {
+export function CharacterView({ logs, gamification, onNavigateToExercise }) {
   const { engineResult, tituloAtivo, pickTitulo } = gamification;
   const [selectedMuscle, setSelectedMuscle] = useState(null);
 

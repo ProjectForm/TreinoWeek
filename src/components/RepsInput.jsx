@@ -12,6 +12,7 @@ export function RepsInput({ value, onChange, placeholder }) {
       <button
         type="button"
         onClick={() => onChange(String(Math.max(0, num - 1)))}
+        aria-label="Diminuir repetições"
         className="stepper-btn shrink-0 bg-zinc-800 rounded text-zinc-400 text-sm active:bg-zinc-700 active:scale-95 transition-transform flex items-center justify-center"
       >
         −
@@ -22,11 +23,13 @@ export function RepsInput({ value, onChange, placeholder }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder || "reps"}
+        aria-label="Repetições"
         className="stepper-input flex-1 min-w-0 bg-zinc-950 border border-zinc-800 rounded px-1 text-center text-sm text-zinc-100 font-bold outline-none focus:border-rose-500"
       />
       <button
         type="button"
         onClick={() => onChange(String(num + 1))}
+        aria-label="Aumentar repetições"
         className="stepper-btn shrink-0 bg-zinc-800 rounded text-zinc-400 text-sm active:bg-zinc-700 active:scale-95 transition-transform flex items-center justify-center"
       >
         +

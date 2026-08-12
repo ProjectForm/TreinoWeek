@@ -29,7 +29,7 @@ export async function sSet(key, value) {
     localStorage.setItem(key, value);
     return { key, value };
   } catch (e) {
-    throw new Error("falha ao salvar no localStorage: " + e.message);
+    throw new Error("falha ao salvar no localStorage: " + e.message, { cause: e });
   }
 }
 

@@ -83,7 +83,7 @@ export function WorkoutForm({ plan, workout }) {
     if (!rest) return;
     if (rest.secondsLeft <= 0) {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
-        try { navigator.vibrate(200); } catch (e) {}
+        try { navigator.vibrate(200); } catch (e) { /* haptics não suportado neste dispositivo */ }
       }
       setRest(null);
       return;
@@ -110,7 +110,7 @@ export function WorkoutForm({ plan, workout }) {
 
     if (!wasComplete && nowComplete) {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
-        try { navigator.vibrate(25); } catch (e) {}
+        try { navigator.vibrate(25); } catch (e) { /* haptics não suportado neste dispositivo */ }
       }
       setRest({ total: DEFAULT_REST_SECONDS, secondsLeft: DEFAULT_REST_SECONDS });
     }
@@ -319,7 +319,10 @@ export function WorkoutForm({ plan, workout }) {
                             </span>
                           )}
                           {done ? (
-                            <Icon name="checkCircle" size={16} className="text-teal-400 shrink-0" />
+                            <>
+                              <Icon name="checkCircle" size={16} className="text-teal-400 shrink-0" />
+                              <span className="sr-only">Série completa</span>
+                            </>
                           ) : (
                             <span className="w-4 shrink-0" aria-hidden="true" />
                           )}

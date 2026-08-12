@@ -4,13 +4,14 @@ import { DEFAULT_BODY } from "../constants/config.js";
 import { DEFAULT_MUSCLE_BREAKDOWN, MUSCLE_TO_GROUP } from "../constants/muscleBreakdown.js";
 import { toISO, todayISO, weekdayFromISO, getWeekKey } from "../utils/dates.js";
 import {
-  tonnageOf, statsOf, getBaseline, computeStatus, computeMeta,
+  statsOf, getBaseline, computeStatus, computeMeta,
   fallbackStatusAndMeta, sanitizeWeight, sanitizeReps,
   computeMusculKcal, computeCardioKcal,
 } from "../utils/stats.js";
 import { computeGroupVolumes } from "../utils/muscles.js";
 import { computeWeekPayload, resolveStreak } from "../utils/week.js";
 import { computePlayerStateEngine, multiplicadorStreak } from "../utils/xp.js";
+import { buildExportPayload, parseBackupInput, isImportedDayNewer } from "../utils/backup.js";
 
 // Hook central: dados de treino (dias, semanas, índices), migração de dados
 // legados, formulário do dia atual, salvar/exportar/importar. Tudo que antes
@@ -54,19 +55,19 @@ export function useWorkoutData(plan, planReady) {
       for (const k of dayKeys) {
         const raw = await sGet(k);
         if (raw) {
-          try { loadedLogs[k.replace("day:", "")] = JSON.parse(raw); } catch (e) {}
+          try { loadedLogs[k.replace("day:", "")] = JSON.parse(raw); } catch (e) { /* registro de dia corrompido: ignora, resto do histórico carrega normalmente */ }
         }
       }
 
       let loadedExHistory = {};
       const exHistRaw = await sGet("exerciseHistory");
       if (exHistRaw) {
-        try { loadedExHistory = JSON.parse(exHistRaw); } catch (e) {}
+        try { loadedExHistory = JSON.parse(exHistRaw); } catch (e) { /* corrompido: segue com histórico vazio em vez de travar o app */ }
       }
       let loadedLastWorkout = {};
       const lastWRaw = await sGet("lastWorkoutByExercise");
       if (lastWRaw) {
-        try { loadedLastWorkout = JSON.parse(lastWRaw); } catch (e) {}
+        try { loadedLastWorkout = JSON.parse(lastWRaw); } catch (e) { /* corrompido: segue vazio em vez de travar o app */ }
       }
 
       const weekKeys = await sList("week:");
@@ -74,7 +75,7 @@ export function useWorkoutData(plan, planReady) {
       for (const k of weekKeys) {
         const raw = await sGet(k);
         if (raw) {
-          try { loadedWeeks[k.replace("week:", "")] = JSON.parse(raw); } catch (e) {}
+          try { loadedWeeks[k.replace("week:", "")] = JSON.parse(raw); } catch (e) { /* registro de semana corrompido: ignora, resto do histórico carrega normalmente */ }
         }
       }
 
@@ -149,7 +150,7 @@ export function useWorkoutData(plan, planReady) {
       const settingsRaw = await sGet("settings");
       let settings = DEFAULT_BODY;
       if (settingsRaw) {
-        try { settings = { ...DEFAULT_BODY, ...JSON.parse(settingsRaw) }; } catch (e) {}
+        try { settings = { ...DEFAULT_BODY, ...JSON.parse(settingsRaw) }; } catch (e) { /* corrompido: segue com os valores padrão */ }
       }
 
       if (alive) {
@@ -443,34 +444,39 @@ export function useWorkoutData(plan, planReady) {
     for (const k of weekKeys) { const v = await sGet(k); if (v) data[k] = v; }
     const singles = ["settings", "exerciseHistory", "lastWorkoutByExercise", "userCreatedAt", "plan", "tituloAtivo", "lastSeenAscensao"];
     for (const k of singles) { const v = await sGet(k); if (v) data[k] = v; }
-    setExportText(JSON.stringify(data));
+    setExportText(JSON.stringify(buildExportPayload(data)));
   }
 
   async function doImport() {
     setImportMsg("");
-    try {
-      const imported = JSON.parse(importInput);
-      for (const [key, rawValue] of Object.entries(imported)) {
+    const parsed = parseBackupInput(importInput);
+    if (!parsed) {
+      setImportMsg("erro");
+      setTimeout(() => setImportMsg(""), 4000);
+      return;
+    }
+    // Cada chave é importada de forma independente: uma entrada corrompida
+    // ou com formato inesperado é pulada, sem abortar (nem corromper) o
+    // restante do backup já processado.
+    let importedCount = 0;
+    for (const [key, rawValue] of Object.entries(parsed.data)) {
+      try {
         const value = typeof rawValue === "string" ? rawValue : JSON.stringify(rawValue);
         if (key.startsWith("day:")) {
           const existing = await sGet(key);
-          if (existing) {
-            const existingParsed = JSON.parse(existing);
-            const importedParsed = JSON.parse(value);
-            const existingDate = new Date(existingParsed.completedAt || "1970-01-01");
-            const importedDate = new Date(importedParsed.completedAt || "1970-01-01");
-            if (importedDate >= existingDate) await sSet(key, value);
-          } else {
+          if (!existing || isImportedDayNewer(existing, value)) {
             await sSet(key, value);
+            importedCount++;
           }
         } else {
           await sSet(key, value);
+          importedCount++;
         }
+      } catch (e) {
+        // entrada individual ilegível: preserva o que já estava salvo e segue pro próximo item
       }
-      setImportMsg("ok");
-    } catch (e) {
-      setImportMsg("erro");
     }
+    setImportMsg(importedCount > 0 ? "ok" : "erro");
     setTimeout(() => setImportMsg(""), 4000);
   }
 

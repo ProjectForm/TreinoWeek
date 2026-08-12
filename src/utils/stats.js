@@ -1,14 +1,39 @@
 import { CARDIO_MET, MET_MUSCULACAO, DEFAULT_BODY } from "../constants/config.js";
 
-// Peso "efetivo" de uma série: para exercícios normais é só o peso; para
-// unilaterais (que guardam weight=E e weightD=D) é a soma dos dois lados,
-// que é a base de volume = (peso_E + peso_D) * reps. Como weightD é
-// undefined em séries não-unilaterais, isso equivale exatamente ao
-// comportamento antigo (parseFloat(s.weight) || 0) para todo o resto do app.
+// ---- Definições centrais de "série" usadas em todo o app ----
+//
+// effectiveWeight: peso "de volume" de uma série. Para exercícios normais é
+// só o peso; para unilaterais (que guardam weight=E e weightD=D) é a soma
+// dos dois lados, que é a base de volume = (peso_E + peso_D) * reps. Como
+// weightD é undefined em séries não-unilaterais, isso equivale exatamente ao
+// comportamento antigo (parseFloat(s.weight) || 0) pro resto do app.
+//
+// maxSideWeight: peso "de carga" de uma série — a maior carga MOVIDA DE UM
+// LADO, não a soma dos dois. Uma série de 10kg na esquerda + 10kg na direita
+// representa uma carga de 10kg por braço, não um PR de 20kg — 20kg é volume,
+// não carga máxima. Para séries não-unilaterais equivale a effectiveWeight
+// (não há dois lados pra distinguir).
+//
+// isSetPerformed: define o que conta como "série realizada" pro resto do
+// app (duração/calorias, contagem de séries completas, etc.) — uma série só
+// é considerada realizada se tiver algum peso real registrado (weight e/ou
+// weightD > 0). Uma linha de série vazia adicionada ao formulário mas nunca
+// preenchida NÃO conta.
 export function effectiveWeight(s) {
   const w = parseFloat(s.weight) || 0;
   const wd = parseFloat(s.weightD) || 0;
   return w + wd;
+}
+
+export function maxSideWeight(s) {
+  const w = parseFloat(s.weight) || 0;
+  if (s.weightD === undefined) return w;
+  const wd = parseFloat(s.weightD) || 0;
+  return Math.max(w, wd);
+}
+
+export function isSetPerformed(s) {
+  return effectiveWeight(s) > 0;
 }
 
 export function tonnageOf(sets) {
@@ -20,11 +45,11 @@ export function tonnageOf(sets) {
 }
 
 export function statsOf(sets) {
-  const valid = (sets || []).filter((s) => effectiveWeight(s) > 0);
+  const valid = (sets || []).filter(isSetPerformed);
   if (!valid.length) return null;
-  const weights = valid.map((s) => effectiveWeight(s));
+  const maxes = valid.map(maxSideWeight);
   const volume = valid.reduce((acc, s) => acc + effectiveWeight(s) * (parseFloat(s.reps) || 0), 0);
-  return { max: Math.max.apply(null, weights), count: valid.length, volume: volume, sets: valid };
+  return { max: Math.max.apply(null, maxes), count: valid.length, volume: volume, sets: valid };
 }
 
 export function getBaseline(exerciseHistory, exerciseId, weeks) {
@@ -50,7 +75,7 @@ export function computeMeta(entries, planItems) {
     const sets = entries[item.id] || [];
     const t = tonnageOf(sets);
     if (t > 0) totalExercisesCompleted++;
-    totalSets += sets.filter((s) => effectiveWeight(s) > 0).length;
+    totalSets += sets.filter(isSetPerformed).length;
     totalVolume += t;
   });
   return { totalExercisesPlanned, totalExercisesCompleted, totalSets, totalVolume };
@@ -91,10 +116,17 @@ export function sanitizeMinutes(value) {
   return num;
 }
 
+// BUG CORRIGIDO: antes contava (entries[id] || []).length — ou seja, toda
+// LINHA de série existente no formulário, incluindo séries vazias (nunca
+// preenchidas) ou adicionadas via "+ adicionar série" e não usadas. Isso
+// inflava a duração/calorias estimadas de treinos parciais (contava a sessão
+// inteira planejada, não o que foi de fato feito). Agora conta só séries
+// realizadas (isSetPerformed — mesma definição usada em tonnageOf/statsOf/
+// computeMeta, só que antes não era usada aqui).
 export function computeMusculKcal(entries, bodyStats) {
   let totalSets = 0;
   Object.keys(entries).forEach((id) => {
-    totalSets += (entries[id] || []).length;
+    totalSets += (entries[id] || []).filter(isSetPerformed).length;
   });
   const secPerSet = bodyStats.secPerSet || DEFAULT_BODY.secPerSet;
   const durationMin = (totalSets * secPerSet) / 60;

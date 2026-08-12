@@ -56,12 +56,12 @@ export function useGamification(logs, weeks, ready) {
   async function acknowledgeAscensao() {
     setShowAscensao(false);
     setLastSeenAscensao(engineResult.ascensaoCount);
-    try { await sSet("lastSeenAscensao", String(engineResult.ascensaoCount)); } catch (e) {}
+    try { await sSet("lastSeenAscensao", String(engineResult.ascensaoCount)); } catch (e) { /* falha ao persistir: estado em memória já foi atualizado, tenta de novo na próxima ascensão */ }
   }
 
   async function pickTitulo(id) {
     setTituloAtivo(id);
-    try { await sSet("tituloAtivo", id); } catch (e) {}
+    try { await sSet("tituloAtivo", id); } catch (e) { /* falha ao persistir: estado em memória já foi atualizado */ }
   }
 
   return {

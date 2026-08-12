@@ -5,7 +5,7 @@ import React from "react";
 export function Switch({ checked, onChange, label }) {
   function toggle() {
     if (typeof navigator !== "undefined" && navigator.vibrate) {
-      try { navigator.vibrate(15); } catch (e) {}
+      try { navigator.vibrate(15); } catch (e) { /* haptics não suportado neste dispositivo */ }
     }
     onChange(!checked);
   }

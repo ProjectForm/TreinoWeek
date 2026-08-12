@@ -15,6 +15,8 @@ export function LevelUpPopup({ event, onClose }) {
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-6 pointer-events-none">
       <div
         onClick={onClose}
+        role="status"
+        aria-live="polite"
         className="pointer-events-auto surface-1 border border-rose-500/30 rounded-2xl px-6 py-5 shadow-soft text-center animate-scaleIn max-w-xs w-full"
       >
         <p className="text-[11px] text-rose-400 uppercase tracking-widest font-semibold">Level Up</p>
