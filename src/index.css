@@ -2,6 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---- Fase 2A-1: tokens de design (radius/shadow/blur/motion) ----
+   Ficam como custom properties, não como chaves do tema do Tailwind, de
+   propósito: as chaves "naturais" desses tokens (sm/md/lg/xl/2xl) colidiriam
+   com as chaves padrão do Tailwind (rounded-lg, shadow-md, blur-sm, ...) já
+   usadas nas telas atuais, e sobrescrevê-las mudaria o visual de telas que
+   esta etapa não deve tocar. Componentes novos (src/components/ui) consomem
+   esses valores via var(--token) ou style inline; nada existente foi alterado. */
+:root {
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.18);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.22);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.32);
+  --glow-teal: 0 0 32px rgba(20, 184, 166, 0.14);
+
+  --blur-sm: 8px;
+  --blur-md: 16px;
+  --blur-lg: 24px;
+  --blur-xl: 32px;
+
+  --duration-instant: 80ms;
+  --duration-micro: 120ms;
+  --duration-standard: 160ms;
+  --duration-emphasis: 220ms;
+  --duration-modal: 240ms;
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* WCAG 2.3.3 — obrigatório pela Fase 2A-1. Não muda nada por padrão; só
+   entra em vigor pra quem tem "reduzir movimento" ativado no SO, então não
+   afeta o visual de nenhuma tela existente no caso comum. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 html, body, #root {
   height: 100%;
 }
