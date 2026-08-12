@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { DEFAULT_EXERCISES } from "../constants/exercises.js";
 import { GROUP_ORDER } from "../constants/muscleBreakdown.js";
 import { DEFAULT_REST_SECONDS } from "../constants/config.js";
+import { DAYS } from "../constants/plan.js";
 import { formatBR, formatWeight, agoLabel, formatSet } from "../utils/formatters.js";
 import { tonnageOf, sanitizeMinutes } from "../utils/stats.js";
 import { WeightInput } from "./WeightInput.jsx";
@@ -12,6 +13,7 @@ import { Icon } from "./Icon.jsx";
 import { Switch } from "./Switch.jsx";
 import { Button } from "./ui/Button.jsx";
 import { Badge } from "./ui/Badge.jsx";
+import { BottomSheet } from "./ui/BottomSheet.jsx";
 
 // Unilateral agora é uma escolha por sessão (guardada no formato do próprio
 // set — weightD presente ou não), então essas funções recebem um boolean já
@@ -47,7 +49,7 @@ function ToggleBtn({ active, onClick, children, className = "" }) {
 
 export function WorkoutForm({ plan, workout }) {
   const {
-    date, setDate, day, logs,
+    date, setDate, day, calendarDay, setTrainingDay, logs,
     entries, caffeine, setCaffeine, cardio, setCardio,
     updateSet, addSet, removeSet, setExerciseUnilateral, repeatPrevious, repeatExercise, previousSameDay, lastByExercise,
     groupVolumesLive, totalTonnage, musculKcalInfo, cardioKcal, totalKcal,
@@ -55,9 +57,11 @@ export function WorkoutForm({ plan, workout }) {
   } = workout;
 
   const info = plan[day] || { items: [], muscle: "", full: "" };
+  const dayIsOverridden = day !== calendarDay;
 
   const [expandedOverrides, setExpandedOverrides] = useState({});
   const [setupOpen, setSetupOpen] = useState(false);
+  const [dayPickerOpen, setDayPickerOpen] = useState(false);
   const [rest, setRest] = useState(null); // { total, secondsLeft }
   const [autoFilled, setAutoFilled] = useState(() => new Set());
 
@@ -144,12 +148,52 @@ export function WorkoutForm({ plan, workout }) {
   return (
     <div className="px-4 pt-4 pb-6">
       <WeekStrip date={date} plan={plan} logs={logs} onSelectDate={setDate} />
-      <p className="text-body-sm text-ink-secondary mt-3">{info.muscle || "Dia de descanso"}</p>
+
+      <div className="flex items-center justify-between gap-2 mt-3">
+        <p className="text-body-sm text-ink-secondary">{info.muscle || "Dia de descanso"}</p>
+        <button onClick={() => setDayPickerOpen(true)} className="press text-caption font-semibold text-primary-400 shrink-0 py-1">
+          Trocar treino
+        </button>
+      </div>
+      {dayIsOverridden && (
+        <p className="text-caption text-ink-tertiary -mt-1">
+          Hoje normalmente é {(plan[calendarDay] && plan[calendarDay].muscle) || "descanso"} — treinando {info.muscle || "descanso"} no lugar, só por hoje.
+        </p>
+      )}
+
+      <BottomSheet open={dayPickerOpen} onClose={() => setDayPickerOpen(false)} label="Escolher treino do dia">
+        <p className="text-section text-ink-primary mb-1">Treinar o quê hoje?</p>
+        <p className="text-body-sm text-ink-tertiary mb-4">Vale só para hoje — os outros dias do seu plano continuam como estão.</p>
+        <div className="space-y-2">
+          {DAYS.filter((k) => plan[k] && plan[k].items && plan[k].items.length > 0).map((k) => {
+            const active = k === day;
+            return (
+              <button
+                key={k}
+                onClick={() => { setTrainingDay(k); setDayPickerOpen(false); }}
+                className={
+                  "w-full flex items-center justify-between text-left px-4 py-3 rounded-[var(--radius-lg)] press " +
+                  (active ? "bg-primary-500/[0.14] border border-primary-500/40" : "bg-surface-2 border border-transparent")
+                }
+              >
+                <div>
+                  <p className="text-sm font-semibold text-ink-primary">{plan[k].muscle}</p>
+                  <p className="text-caption text-ink-tertiary mt-0.5">{plan[k].full}{k === calendarDay ? " · hoje" : ""}</p>
+                </div>
+                {active && <Icon name="checkCircle" size={18} className="text-primary-400" />}
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
 
       {info.items.length === 0 ? (
         <div className="mt-16 text-center">
           <p className="text-title text-ink-secondary">Dia de descanso</p>
           <p className="text-body-sm text-ink-tertiary mt-1">Sem treino planejado para hoje. Aproveite para recuperar.</p>
+          <button onClick={() => setDayPickerOpen(true)} className="press text-caption font-semibold text-primary-400 mt-4">
+            Ou treine outro grupo muscular hoje
+          </button>
         </div>
       ) : (
         <div className="mt-4">

@@ -18,12 +18,24 @@ import { buildExportPayload, parseBackupInput, isImportedDayNewer } from "../uti
 // vivia dentro do componente App() de forma monolítica agora mora aqui.
 export function useWorkoutData(plan, planReady) {
   const [date, setDate] = useState(todayISO());
-  // Dia da semana é sempre derivado da data — nunca um estado separado que
-  // possa dessincronizar (essa era a causa da inconsistência data/dia).
-  const day = weekdayFromISO(date);
+  // Dia da semana em si é sempre derivado da data — nunca um estado separado
+  // que possa dessincronizar (essa era a causa da inconsistência data/dia).
+  const calendarDay = weekdayFromISO(date);
 
   const [logs, setLogs] = useState({});
   const [weeks, setWeeks] = useState({});
+
+  // `day` é o dia do PLANO usado pra montar a sessão de hoje — normalmente
+  // igual ao dia da semana, mas pode ser trocado pelo usuário (ex.: treinar
+  // perna na quarta por ter faltado a terça). A troca vale só pra esta data:
+  // reseta ao navegar pra outra data, e some assim que um treino é salvo com
+  // esse dayKey (dayOverride some, mas logs[date].dayKey já guarda a escolha).
+  const [dayOverride, setDayOverride] = useState(null);
+  useEffect(() => { setDayOverride(null); }, [date]);
+  const day = dayOverride || (logs[date] && logs[date].dayKey) || calendarDay;
+  function setTrainingDay(dayKey) {
+    setDayOverride(dayKey);
+  }
   const [exerciseHistory, setExerciseHistory] = useState({});
   const [lastWorkoutByExercise, setLastWorkoutByExercise] = useState({});
   const [userCreatedAt, setUserCreatedAt] = useState(null);
@@ -193,6 +205,10 @@ export function useWorkoutData(plan, planReady) {
 
   useEffect(() => {
     const items = (plan[day] && plan[day].items) || [];
+    // Só reaproveita dados salvos se forem do MESMO dia efetivo — se o
+    // usuário trocou o treino de hoje pra outro grupo muscular, os IDs de
+    // exercício do dia salvo (se houver) não batem com os do novo grupo, e
+    // cada exercício cai naturalmente no branch "sem dado salvo" abaixo.
     const saved = logs[date];
     const next = {};
     items.forEach((item) => {
@@ -220,7 +236,7 @@ export function useWorkoutData(plan, planReady) {
     setEntries(next);
     setCaffeine(saved && typeof saved.caffeine === "boolean" ? saved.caffeine : null);
     setCardio(saved && saved.cardio ? saved.cardio : { did: null, type: "caminhada", minutes: "", intensity: "moderada" });
-  }, [date, ready, logs, plan]);
+  }, [date, ready, logs, plan, day]);
 
   function updateSet(exId, idx, field, value) {
     const clean = field === "reps" ? sanitizeReps(value) : sanitizeWeight(value);
@@ -481,7 +497,7 @@ export function useWorkoutData(plan, planReady) {
   }
 
   return {
-    date, setDate, day, shiftDate,
+    date, setDate, day, calendarDay, setTrainingDay, shiftDate,
     logs, weeks, exerciseHistory, lastWorkoutByExercise, userCreatedAt,
     bodyStats, setBodyStats, saveProfile, profileMsg,
     entries, caffeine, setCaffeine, cardio, setCardio,
